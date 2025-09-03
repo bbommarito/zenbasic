@@ -1,11 +1,16 @@
 import re
 from typing import Dict, Optional, Any, Tuple
 
+from lark import Lark, exceptions
+
+from basicTransformer import BASIC_GRAMMAR, BasicTransformer
+
 class ZenBasicRepl:
     def __init__(self):
         self.program_lines: Dict[int, str] = {}  # Line number -> code
         self.variables: Dict[str, Any] = {}      # Variable storage
         self.running = True
+        self.parser = Lark(BASIC_GRAMMAR)
 
     def print_banner(self):
         """Print startup banner like original BBC BASIC"""
@@ -46,11 +51,21 @@ class ZenBasicRepl:
             self.run_program()
         elif command == "NEW":
             self.new_program()
+        elif command == "VARS":
+            self.list_variables()
         elif command == "QUIT" or command == "EXIT":
             self.running = False
             print("Goodbye!")
         else:
-            print(f"Unknown command: {command}")
+            try:
+                tree = self.parser.parse(command)
+                transformer = BasicTransformer(self.variables)
+                result = transformer.transform(tree)
+                print(result)
+            except exceptions.LarkError as e:
+                print(f"Syntax error: {e}")
+            except Exception as e:
+                print(f"Error: {e}")
     
     def list_program(self):
         """List the current program"""
@@ -60,6 +75,16 @@ class ZenBasicRepl:
             
         for line_num in sorted(self.program_lines.keys()):
             print(f"{line_num:5d} {self.program_lines[line_num]}")
+
+    def list_variables(self):
+        """List current variables and their values"""
+        if not self.variables:
+            print("No variables set")
+            return
+            
+        print("Variables:")
+        for var_name, value in sorted(self.variables.items()):
+            print(f"{var_name} = {value}")
     
     def run_program(self):
         """Run the stored program"""
