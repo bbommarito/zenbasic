@@ -9,8 +9,11 @@ BASIC_GRAMMAR = r"""
                 | expression "-" term   -> sub
                 | term
 
-    term: NUMBER
-        | IDENTIFIER
+    term: term "*" factor   -> mul
+        | factor
+
+    factor: NUMBER
+           | IDENTIFIER
 
     IDENTIFIER: /[A-Z][A-Z0-9_]*/
     NUMBER: /\d+/
@@ -39,6 +42,28 @@ class BasicTransformer(Transformer[Any, Any]):
         right = items[1]
         return self.sub_by_loop(left, right)
 
+    def mul(self, items: List[Any]) -> int:
+        left = items[0]
+        right = items[1]
+        return self.multiply_by_addition(left, right)
+
+    def multiply_by_addition(self, a: int, b: int) -> int:
+        if a == 0 or b == 0:
+            return 0
+        
+        negative_result = (a < 0) ^ (b < 0)
+        a, b = abs(a), abs(b)
+
+        if a > b:
+            a, b = b, a
+
+        result = 0
+        for _ in range(a):
+            result = self.add_by_loop(result, b)
+
+        return -result if negative_result else result
+
+
     def sub_by_loop(self, a: int, b: int) -> int:
         return self.add_by_loop(a, -b)
 
@@ -52,6 +77,9 @@ class BasicTransformer(Transformer[Any, Any]):
             for _ in range(-b):
                 a -= 1
         return a
+
+    def factor(self, items: List[Any]) -> int:
+        return items[0]
 
     def expression(self, items: List[Any]) -> int:
         return items[0]
