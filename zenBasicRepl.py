@@ -11,6 +11,7 @@ class ZenBasicRepl:
         self.variables: Dict[str, Any] = {}      # Variable storage
         self.running = True
         self.parser = Lark(BASIC_GRAMMAR)
+        self.turbo = False
 
     def print_banner(self):
         """Print startup banner like original BBC BASIC"""
@@ -54,13 +55,19 @@ class ZenBasicRepl:
             self.new_program()
         elif command == "VARS":
             self.list_variables()
+        elif command == "TURBO":
+            self.turbo = True
+            print("Turbo mode enabled")
+        elif command == "SLOW":
+            self.turbo = False
+            print("Turbo mode disabled")
         elif command == "QUIT" or command == "EXIT":
             self.running = False
             print("Goodbye!")
         else:
             try:
                 tree = self.parser.parse(command)
-                transformer = BasicTransformer(self.variables)
+                transformer = BasicTransformer(self.variables, self.turbo)
                 result = transformer.transform(tree)
                 print(result)
             except exceptions.LarkError as e:
@@ -101,7 +108,7 @@ class ZenBasicRepl:
             # Try to execute the code using our parser
             try:
                 tree = self.parser.parse(code)
-                transformer = BasicTransformer(self.variables)
+                transformer = BasicTransformer(self.variables, self.turbo)
                 result = transformer.transform(tree)
                 if result:  # Only print if there's a result
                     print(result)
@@ -122,7 +129,8 @@ class ZenBasicRepl:
         while self.running:
             try:
                 # Read
-                user_input = input("> ").strip()
+                input_line = "(turbo) > " if self.turbo else "> "
+                user_input = input(input_line).strip()
                 
                 if not user_input:
                     continue

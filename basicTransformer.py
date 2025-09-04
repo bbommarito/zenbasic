@@ -23,8 +23,9 @@ BASIC_GRAMMAR = r"""
 """
 
 class BasicTransformer(Transformer[Any, Any]):
-    def __init__(self, variables: Dict[str, int]):
+    def __init__(self, variables: Dict[str, int], turbo: bool = False):
         self.variables = variables
+        self.turbo = turbo
 
     def let_statement(self, items: List[Any]):
         var_name = str(items[0])
@@ -50,7 +51,11 @@ class BasicTransformer(Transformer[Any, Any]):
     def multiply_by_addition(self, a: int, b: int) -> int:
         if a == 0 or b == 0:
             return 0
-        
+
+        if self.turbo:
+            # Turbo mode: use multiplication directly
+            return a * b
+
         negative_result = (a < 0) ^ (b < 0)
         a, b = abs(a), abs(b)
 
@@ -65,11 +70,20 @@ class BasicTransformer(Transformer[Any, Any]):
 
 
     def sub_by_loop(self, a: int, b: int) -> int:
+        if self.turbo:
+            # Turbo mode: use subtraction directly
+            return a - b
+
         return self.add_by_loop(a, -b)
 
     def add_by_loop(self, a: int, b: int) -> int:
         if b == 0:
             return a
+
+        if self.turbo:
+            # Turbo mode: use addition directly
+            return a + b
+
         if b > 0:
             for _ in range(b):
                 a += 1
