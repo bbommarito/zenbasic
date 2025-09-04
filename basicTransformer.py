@@ -10,6 +10,7 @@ BASIC_GRAMMAR = r"""
                 | term
 
     term: term "*" factor   -> mul
+        | term "/" factor   -> div
         | factor
 
     factor: NUMBER
@@ -47,6 +48,29 @@ class BasicTransformer(Transformer[Any, Any]):
         left = items[0]
         right = items[1]
         return self.multiply_by_addition(left, right)
+
+    def div(self, items: List[Any]) -> int:
+        left = items[0]
+        right = items[1]
+        return self.div_by_loop(left, right)
+
+    def div_by_loop(self, a: int, b: int) -> int:
+        if b == 0:
+            raise ZeroDivisionError("Division by zero")
+
+        if self.turbo:
+            # Turbo mode: use division directly
+            return a // b
+
+        negative_result = (a < 0) ^ (b < 0)
+        a, b = abs(a), abs(b)
+
+        count = 0
+        while a >= b:
+            a = self.sub_by_loop(a, b)
+            count += 1
+
+        return -count if negative_result else count
 
     def multiply_by_addition(self, a: int, b: int) -> int:
         if a == 0 or b == 0:
