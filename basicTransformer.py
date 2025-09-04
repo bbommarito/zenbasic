@@ -1,5 +1,6 @@
+from turtle import left
 from lark import Transformer, Token
-from typing import Dict, Any, List 
+from typing import Dict, Any, List, Tuple, Union 
 BASIC_GRAMMAR = r"""
     ?start: let_statement
 
@@ -16,43 +17,85 @@ BASIC_GRAMMAR = r"""
     factor: NUMBER
            | IDENTIFIER
 
-    IDENTIFIER: /[A-Z][A-Z0-9_]*/
-    NUMBER: /\d+/
+    IDENTIFIER: /[A-Z][A-Z0-9_]*[%$]?/
+    NUMBER: /\d+(\.\d+)?/
 
     %import common.WS
     %ignore WS
 """
 
 class BasicTransformer(Transformer[Any, Any]):
-    def __init__(self, variables: Dict[str, int], turbo: bool = False):
+    def __init__(self, variables: Dict[str, Tuple[Any, str]], turbo: bool = False):
         self.variables = variables
         self.turbo = turbo
 
     def let_statement(self, items: List[Any]):
-        var_name = str(items[0])
-        value = int(items[1])
-        self.variables[var_name] = value
-        return f"Variable {var_name} set to {value}"
+        var_name = str(items[0])          
+        expression_result = items[1]        
 
-    def add(self, items: List[Any]) -> int:
-        left = items[0]
-        right = items[1]
-        return self.add_by_loop(left, right)
+        if isinstance(expression_result, tuple):
+            value = expression_result[0] # type: ignore
+        else:
+            value = expression_result
+    
+        self.set_variable(var_name, value)
+        return f"Variable {var_name} set to {self.variables[var_name][0]}"
 
-    def sub(self, items: List[Any]) -> int:
-        left = items[0]
-        right = items[1]
-        return self.sub_by_loop(left, right)
+    def set_variable(self, name: str, value: Any):
+        if name.endswith('%'):
+            self.variables[name] = (int(value), 'integer')
+        elif name.endswith('$'):
+            self.variables[name] = (str(value), 'string')
+        else:
+            self.variables[name] = (float(value), 'float')
 
-    def mul(self, items: List[Any]) -> int:
-        left = items[0]
-        right = items[1]
-        return self.multiply_by_addition(left, right)
+    def get_variable(self, name: str):
+        value, var_type = self.variables.get(name, (0, 'float'))
+        return value, var_type
 
-    def div(self, items: List[Any]) -> int:
-        left = items[0]
-        right = items[1]
-        return self.div_by_loop(left, right)
+    def add(self, items: List[Any]) -> Tuple[Union[int, float], str]:
+        left_val, left_type = items[0]
+        right_val, right_type = items[1]
+
+        if left_type == 'integer' and right_type == 'integer':
+            result = self.add_by_loop(left_val, right_val)
+            return (result, 'integer')
+        else:
+            result = float(left_val) + float(right_val)
+            return (result, 'float')
+
+    def sub(self, items: List[Any]) -> Tuple[Union[int, float], str]:
+        left_val, left_type = items[0]
+        right_val, right_type = items[1]
+
+        if left_type == 'integer' and right_type == 'integer':
+            result = self.sub_by_loop(left_val, right_val)
+            return (result, 'integer')
+        else:
+            result = float(left_val) - float(right_val)
+            return (result, 'float')
+
+    def mul(self, items: List[Any]) -> Tuple[Union[int, float], str]:
+        left_val, left_type = items[0]
+        right_val, right_type = items[1]
+
+        if left_type == 'integer' and right_type == 'integer':
+            result =  self.multiply_by_addition(left_val, right_val)
+            return (result, 'integer')
+        else:
+            result = float(left_val) * float(right_val)
+            return (result, 'float')
+
+    def div(self, items: List[Any]) -> Tuple[Union[int, float], str]:
+        left_val, left_type = items[0]
+        right_val, right_type = items[1]
+
+        if left_type == 'integer' and right_type == 'integer':
+            result =  self.div_by_loop(left_val, right_val)
+            return (result, 'integer')
+        else:
+            result = float(left_val) / float(right_val)
+            return (result, 'float')
 
     def div_by_loop(self, a: int, b: int) -> int:
         if b == 0:
@@ -116,8 +159,13 @@ class BasicTransformer(Transformer[Any, Any]):
                 a -= 1
         return a
 
-    def factor(self, items: List[Any]) -> int:
-        return items[0]
+    def factor(self, items: List[Any]) -> Tuple[Union[int, float], str]:
+        item: Union[Tuple[Union[int, float], str], str] = items[0]
+        if isinstance(item, tuple):
+            return item
+        else:
+            var_name = str(item)
+            return self.get_variable(var_name)
 
     def expression(self, items: List[Any]) -> int:
         return items[0]
@@ -128,5 +176,9 @@ class BasicTransformer(Transformer[Any, Any]):
     def IDENTIFIER(self, token: Token) -> str:
         return str(token)
     
-    def NUMBER(self, token: Token) -> int:
-        return int(token)
+    def NUMBER(self, token: Token) -> Tuple[Any, str]:
+        value_str = str(token)
+        if '.' in value_str:
+            return float(value_str), 'float'
+        else:
+            return int(value_str), 'integer'

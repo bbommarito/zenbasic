@@ -8,7 +8,7 @@ from basicTransformer import BASIC_GRAMMAR, BasicTransformer
 class ZenBasicRepl:
     def __init__(self):
         self.program_lines: Dict[int, str] = {}  # Line number -> code
-        self.variables: Dict[str, Any] = {}      # Variable storage
+        self.variables: Dict[str, Tuple[Any, str]] = {}      # Variable storage
         self.running = True
         self.parser = Lark(BASIC_GRAMMAR)
         self.turbo = False
@@ -92,7 +92,7 @@ class ZenBasicRepl:
             
         print("Variables:")
         for var_name, value in sorted(self.variables.items()):
-            print(f"{var_name} = {value}")
+            print(f"{var_name} = {value[0]}")
     
     def run_program(self):
         """Run the stored program"""
