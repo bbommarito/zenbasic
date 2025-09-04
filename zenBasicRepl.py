@@ -32,6 +32,7 @@ class ZenBasicRepl:
 
     def store_program_line(self, line_num: int, code: str):
         """Store a numbered program line"""
+        print(f"Storing line {line_num}: {code}")
         if code.strip():
             self.program_lines[line_num] = code
             print(f"Line {line_num} stored")
@@ -93,10 +94,20 @@ class ZenBasicRepl:
             return
             
         print("Running program...")
-        # TODO: Implement actual program execution
         for line_num in sorted(self.program_lines.keys()):
-            print(f"[Would execute: {line_num} {self.program_lines[line_num]}]")
-        print("Program finished")
+            code = self.program_lines[line_num]
+            print(f"Executing line {line_num}: {code}")
+            
+            # Try to execute the code using our parser
+            try:
+                tree = self.parser.parse(code)
+                transformer = BasicTransformer(self.variables)
+                result = transformer.transform(tree)
+                if result:  # Only print if there's a result
+                    print(result)
+            except Exception as e:
+                print(f"Runtime error at line {line_num}: {e}")
+                break  # Stop execution on error
     
     def new_program(self):
         """Clear the current program"""
