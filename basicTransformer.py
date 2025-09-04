@@ -6,6 +6,7 @@ BASIC_GRAMMAR = r"""
     let_statement: "LET"i IDENTIFIER "=" expression
 
     expression: expression "+" term   -> add
+                | expression "-" term   -> sub
                 | term
 
     term: NUMBER
@@ -32,7 +33,15 @@ class BasicTransformer(Transformer[Any, Any]):
         left = items[0]
         right = items[1]
         return self.add_by_loop(left, right)
-    
+
+    def sub(self, items: List[Any]) -> int:
+        left = items[0]
+        right = items[1]
+        return self.sub_by_loop(left, right)
+
+    def sub_by_loop(self, a: int, b: int) -> int:
+        return self.add_by_loop(a, -b)
+
     def add_by_loop(self, a: int, b: int) -> int:
         if b == 0:
             return a
