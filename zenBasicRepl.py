@@ -65,6 +65,23 @@ class ZenBasicRepl:
             print("Turbo mode disabled")
         elif command == "CLS" or command == "CLEAR":
             self.clear_screen()
+        elif command.startswith("SAVE"):
+            parts = command.split(maxsplit=1)
+            if len(parts) < 2:
+                print("Error: SAVE requires a filename")
+            else:
+                filename = parts[1].strip()
+                if not filename.lower().endswith('.bas'):
+                    filename += '.bas'
+
+                try:
+                    with open(filename, 'w') as f:
+                        for line_num in sorted(self.program_lines.keys()):
+                            f.write(f"{line_num} {self.program_lines[line_num]}\n")
+                    print(f"Program saved to {filename}")
+                except IOError as e:
+                    print(f"Error saving file: {e}")
+
         elif command == "QUIT" or command == "EXIT":
             self.running = False
             print("Goodbye!")
