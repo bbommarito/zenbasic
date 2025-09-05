@@ -2,6 +2,7 @@
 Memory management for ZenBasic - authentic 64K address space
 """
 from typing import Tuple, Optional
+import struct
 
 # Memory map constants
 ZERO_PAGE_START = 0x0000
@@ -45,6 +46,29 @@ class MemoryManager:
         low_byte = self.memory[address]
         high_byte = self.memory[address + 1]
         return low_byte | (high_byte << 8)
+    
+    def store_float32(self, address: int, value: float) -> None:
+        """Store 32-bit float at address, little endian"""
+        if address < 0 or address + 3 >= self.size:
+            raise ValueError(f"Address {address:04X} out of range")
+        
+        # Convert Python float to 32-bit IEEE 754 bytes
+        bytes_data = struct.pack('<f', value)  # '<' for little endian, 'f' for float32
+        
+        # Store the 4 bytes
+        for i, byte in enumerate(bytes_data):
+            self.memory[address + i] = byte
+    
+    def read_float32(self, address: int) -> float:
+        """Read 32-bit float from address, little endian"""
+        if address < 0 or address + 3 >= self.size:
+            raise ValueError(f"Address {address:04X} out of range")
+        
+        # Read 4 bytes
+        bytes_data = bytes(self.memory[address:address + 4])
+        
+        # Convert from IEEE 754 bytes back to Python float
+        return struct.unpack('<f', bytes_data)[0]
     
     def allocate_variable(self, name: str, size: int) -> int:
         """Allocate space for a variable, return its address"""

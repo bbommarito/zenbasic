@@ -36,6 +36,9 @@ class BasicTransformer(Transformer[Any, Any]):
             self.variables[name] = (str(value), 'string')
         else:
             self.variables[name] = (float(value), 'float')
+            
+            if hasattr(self, 'repl_instance') and self.repl_instance:
+                self.repl_instance.store_variable_in_memory(name, float(value), 'float')
 
     def get_variable(self, name: str):
         value, var_type = self.variables.get(name, (0, 'float'))

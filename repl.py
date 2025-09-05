@@ -55,6 +55,16 @@ class ZenBasicRepl:
             # Store the value
             self.memory_manager.store_int16(address, int(value))
             print(f"Stored {value} in memory at ${address:04X}")
+            
+        elif var_type == 'float':
+            size = 4  # 32-bit float = 4 bytes
+            address = self.memory_manager.allocate_variable(name, size)
+            if name not in self.variables:
+                print(f"Allocated {name} at address ${address:04X}")
+                
+            # Store the value
+            self.memory_manager.store_float32(address, float(value))
+            print(f"Stored {value} in memory at ${address:04X}")
 
 
     def execute_immediate_command(self, command: str):
