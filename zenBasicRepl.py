@@ -23,13 +23,15 @@ class ZenBasicRepl:
 
     def parse_line_number(self, line: str) -> Tuple[Optional[int], str]:
         """Extract line number if present, return (line_num, remaining_code)"""
-        line = line.strip()
-        if not line:
+        # Don't strip! We need to check the original line for leading numbers
+        if not line.strip():
             return None, ""
             
-        # Check if line starts with a number
-        match = re.match(r'^(\d+)\s*(.*)', line)
+        # Check if line starts with a number (possibly with leading whitespace)
+        # This regex captures EVERYTHING after the digits, including precious whitespace
+        match = re.match(r'^\s*(\d+)(.*)', line)
         if match:
+            # Return line number and EVERYTHING after it (every space, tab, whatever)
             return int(match.group(1)), match.group(2)
         return None, line
 
@@ -47,26 +49,29 @@ class ZenBasicRepl:
 
     def execute_immediate_command(self, command: str):
         """Execute immediate mode commands (no line number)"""
-        command = command.strip().upper()
+        # Keep original command for things that need it (like filenames)
+        original_command = command
+        command_upper = command.strip().upper()
         
-        if command == "LIST":
+        if command_upper == "LIST":
             self.list_program()
-        elif command == "RUN":
+        elif command_upper == "RUN":
             self.run_program()
-        elif command == "NEW":
+        elif command_upper == "NEW":
             self.new_program()
-        elif command == "VARS":
+        elif command_upper == "VARS":
             self.list_variables()
-        elif command == "TURBO":
+        elif command_upper == "TURBO":
             self.turbo = True
             print("Turbo mode enabled")
-        elif command == "SLOW":
+        elif command_upper == "SLOW":
             self.turbo = False
             print("Turbo mode disabled")
-        elif command == "CLS" or command == "CLEAR":
+        elif command_upper == "CLS" or command_upper == "CLEAR":
             self.clear_screen()
-        elif command.startswith("SAVE"):
-            parts = command.split(maxsplit=1)
+        elif command_upper.startswith("SAVE"):
+            # Use original command to preserve filename case
+            parts = original_command.split(maxsplit=1)
             if len(parts) < 2:
                 print("Error: SAVE requires a filename")
             else:
@@ -77,17 +82,19 @@ class ZenBasicRepl:
                 try:
                     with open(filename, 'w') as f:
                         for line_num in sorted(self.program_lines.keys()):
-                            f.write(f"{line_num} {self.program_lines[line_num]}\n")
+                            # Write exactly what was stored - line number + preserved content
+                            f.write(f"{line_num}{self.program_lines[line_num]}\n")
                     print(f"Program saved to {filename}")
                 except IOError as e:
                     print(f"Error saving file: {e}")
 
-        elif command == "QUIT" or command == "EXIT":
+        elif command_upper == "QUIT" or command_upper == "EXIT":
             self.running = False
             print("Goodbye!")
         else:
             try:
-                tree = self.parser.parse(command)
+                # Use original command for parsing to preserve case
+                tree = self.parser.parse(original_command)
                 transformer = BasicTransformer(self.variables, self.turbo)
                 result = transformer.transform(tree)
                 print(result)
@@ -157,9 +164,10 @@ class ZenBasicRepl:
             try:
                 # Read
                 input_line = "(turbo) > " if self.turbo else "> "
-                user_input = input(input_line).strip()
+                user_input = input(input_line)
                 
-                if not user_input:
+                # Only check if it's empty, don't strip!
+                if not user_input.strip():
                     continue
                 
                 # Parse for line number
