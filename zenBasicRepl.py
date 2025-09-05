@@ -1,4 +1,6 @@
 import re
+import subprocess
+import os
 from typing import Dict, Optional, Any, Tuple
 
 from lark import Lark, exceptions
@@ -61,6 +63,8 @@ class ZenBasicRepl:
         elif command == "SLOW":
             self.turbo = False
             print("Turbo mode disabled")
+        elif command == "CLS" or command == "CLEAR":
+            self.clear_screen()
         elif command == "QUIT" or command == "EXIT":
             self.running = False
             print("Goodbye!")
@@ -121,9 +125,15 @@ class ZenBasicRepl:
         self.program_lines.clear()
         self.variables.clear()
         print("Program cleared")
+
+    def clear_screen(self):
+        subprocess.run(['clear'] if os.name == 'posix' else ['cmd', '/c', 'cls'])
+
+ 
     
     def repl(self):
         """Main Read-Eval-Print Loop"""
+        self.clear_screen()
         self.print_banner()
         
         while self.running:
