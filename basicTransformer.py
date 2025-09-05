@@ -29,7 +29,7 @@ class BasicTransformer(Transformer[Any, Any]):
         self.variables = variables
         self.turbo = turbo
 
-    def let_statement(self, items: List[Any]):
+    def let_statement(self, items: List[Any]) -> str:
         var_name = str(items[0])          
         expression_result = items[1]        
 
