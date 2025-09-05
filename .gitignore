@@ -17,3 +17,9 @@ ENV/
 # OS specific files
 .DS_Store
 Thumbs.db
+
+# BASIC program files
+*.bas
+
+# Grammar backup files
+*.lark.bak

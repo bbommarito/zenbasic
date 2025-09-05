@@ -11,14 +11,14 @@ ZenBasic is a Python-based interpreter for BBC BASIC that recreates the experien
 The project follows a classic interpreter architecture:
 
 1. **main.py** - Entry point that instantiates and runs the REPL
-2. **zenBasicRepl.py** - Core REPL implementation handling:
+2. **repl.py** - Core REPL implementation handling:
    - Line number parsing and program storage
    - Immediate command execution (LIST, RUN, NEW, VARS, QUIT)
    - Program execution line-by-line
    - Variable storage as a dictionary
    - Turbo mode toggle for faster arithmetic
 
-3. **basicTransformer.py** - Lark-based parser and AST transformer:
+3. **transformer.py** - Lark-based parser and AST transformer:
    - Grammar definition for BASIC syntax
    - Arithmetic operations implemented via loops (add_by_loop, sub_by_loop, multiply_by_addition, div_by_loop)
    - Turbo mode shortcuts that use native operators
@@ -42,14 +42,14 @@ pip install lark
 ## Development Guidelines
 
 ### Parser Modifications
-- Grammar is defined in `BASIC_GRAMMAR` string in basicTransformer.py
+- Grammar is defined in `BASIC_GRAMMAR` string in transformer.py
 - Use Lark parser syntax for new statements
 - Follow the existing pattern: create grammar rule → implement transformer method
 
 ### Adding New BASIC Commands
-1. For immediate commands: Add to `execute_immediate_command()` in zenBasicRepl.py
+1. For immediate commands: Add to `execute_immediate_command()` in repl.py
 2. For program statements: 
-   - Add grammar rule in basicTransformer.py
+   - Add grammar rule in transformer.py
    - Implement corresponding transformer method
    - Ensure proper variable storage/retrieval
 

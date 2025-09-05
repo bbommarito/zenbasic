@@ -89,8 +89,11 @@ python main.py
 
 ## Project Structure
 - `main.py` - Entry point for the application
-- `zenBasicRepl.py` - Core REPL implementation
-- `basicTransformer.py` - Lark-based parser and transformer (where the mathematical magic happens)
+- `repl.py` - Core REPL implementation
+- `transformer.py` - Lark-based parser and transformer (where the mathematical magic happens)
+- `memory.py` - Memory management with authentic 64K address space
+- `arithmetic.py` - Loop-based arithmetic operations
+- `program.py` - Program line storage and management
 - `.gitignore` - Git ignore file for Python projects
 
 ## Memory Map

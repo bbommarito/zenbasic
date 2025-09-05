@@ -1,4 +1,4 @@
-from zenBasicRepl import ZenBasicRepl
+from repl import ZenBasicRepl
 
 def main():
     repl = ZenBasicRepl()
