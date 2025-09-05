@@ -14,6 +14,7 @@ class ZenBasicRepl:
         self.running = True
         self.parser = Lark(BASIC_GRAMMAR)
         self.turbo = False
+        self.memory = bytearray(65536)
 
     def print_banner(self):
         """Print startup banner like original BBC BASIC"""
@@ -69,6 +70,16 @@ class ZenBasicRepl:
             print("Turbo mode disabled")
         elif command_upper == "CLS" or command_upper == "CLEAR":
             self.clear_screen()
+        elif command_upper.startswith("DUMP"):
+            parts = original_command.split()
+            if len(parts) >= 2:
+                try:
+                    start_addr = int(parts[1], 16) if parts[1].startswith('0x') else int(parts[1])
+                    self.dump_memory(start_addr)
+                except ValueError:
+                    print("Invalid address")
+            else:
+                self.dump_memory(0x0800)  # Default to variable area
         elif command_upper.startswith("SAVE"):
             # Use original command to preserve filename case
             parts = original_command.split(maxsplit=1)
@@ -153,8 +164,25 @@ class ZenBasicRepl:
     def clear_screen(self):
         subprocess.run(['clear'] if os.name == 'posix' else ['cmd', '/c', 'cls'])
 
- 
-    
+    def dump_memory(self, start_addr: int, length: int = 64) -> None:
+        print(f"Memory dump starting at ${start_addr:04X}:")
+        for i in range(0, length, 16):
+            addr = start_addr + i
+            if addr >= 65536:
+                break
+            
+            # Address
+            line = f"${addr:04X}: "
+            
+            # Hex bytes
+            for j in range(16):
+                if addr + j < 65536:
+                    line += f"{self.memory[addr + j]:02X} "
+                else:
+                    line += "   "
+            
+            print(line)
+
     def repl(self):
         """Main Read-Eval-Print Loop"""
         self.clear_screen()
