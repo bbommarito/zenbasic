@@ -15,6 +15,8 @@ class ZenBasicRepl:
         self.parser = Lark(BASIC_GRAMMAR)
         self.turbo = False
         self.memory = bytearray(65536)
+        self.next_var_address = 0x0800  # Start of variable area
+        self.var_table: Dict[str, Tuple[int, int]] = {}  # name -> (address, size)
 
     def print_banner(self):
         """Print startup banner like original BBC BASIC"""
@@ -47,6 +49,30 @@ class ZenBasicRepl:
             if line_num in self.program_lines:
                 del self.program_lines[line_num]
                 print(f"Line {line_num} deleted")
+
+    def store_variable_in_memory(self, name: str, value: Any, var_type: str) -> None:
+        """Store a variable in memory and update the variable table"""
+        if var_type == 'integer':
+            if name not in self.var_table:
+                # Allocate new space
+                address = self.next_var_address
+                size = 2  # 16-bit integer = 2 bytes
+                self.var_table[name] = (address, size)
+                self.next_var_address += size
+                print(f"Allocated {name} at address ${address:04X}")
+            else:
+                # Use existing space
+                address, size = self.var_table[name]
+                
+            # Store the value
+            self.store_int16(address, int(value))
+            print(f"Stored {value} in memory at ${address:04X}")
+
+    def store_int16(self, address: int, value: int) -> None:
+        """Store 16-bit integer at address, little endian"""
+        value = int(value) & 0xFFFF  # Clamp to 16-bit
+        self.memory[address] = value & 0xFF        # Low byte first
+        self.memory[address + 1] = (value >> 8) & 0xFF  # High byte second
 
     def execute_immediate_command(self, command: str):
         """Execute immediate mode commands (no line number)"""
@@ -107,6 +133,7 @@ class ZenBasicRepl:
                 # Use original command for parsing to preserve case
                 tree = self.parser.parse(original_command)
                 transformer = BasicTransformer(self.variables, self.turbo)
+                transformer.repl_instance = self
                 result = transformer.transform(tree)
                 print(result)
             except exceptions.LarkError as e:
@@ -148,6 +175,7 @@ class ZenBasicRepl:
             try:
                 tree = self.parser.parse(code)
                 transformer = BasicTransformer(self.variables, self.turbo)
+                transformer.repl_instance = self
                 result = transformer.transform(tree)
                 if result:  # Only print if there's a result
                     print(result)

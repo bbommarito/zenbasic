@@ -1,6 +1,10 @@
-from turtle import left
+from __future__ import annotations
 from lark import Transformer, Token
-from typing import Dict, Any, List, Tuple, Union 
+from typing import Dict, Any, List, Tuple, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from zenBasicRepl import ZenBasicRepl
+
 BASIC_GRAMMAR = r"""
     ?start: let_statement
 
@@ -28,6 +32,7 @@ class BasicTransformer(Transformer[Any, Any]):
     def __init__(self, variables: Dict[str, Tuple[Any, str]], turbo: bool = False):
         self.variables = variables
         self.turbo = turbo
+        self.repl_instance: Union[ZenBasicRepl, None] = None
 
     def let_statement(self, items: List[Any]) -> str:
         var_name = str(items[0])          
@@ -44,6 +49,9 @@ class BasicTransformer(Transformer[Any, Any]):
     def set_variable(self, name: str, value: Any):
         if name.endswith('%'):
             self.variables[name] = (int(value), 'integer')
+            
+            if hasattr(self, 'repl_instance') and self.repl_instance:  # We'll pass this reference
+                self.repl_instance.store_variable_in_memory(name, int(value), 'integer')
         elif name.endswith('$'):
             self.variables[name] = (str(value), 'string')
         else:
