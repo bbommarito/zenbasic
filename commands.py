@@ -80,7 +80,7 @@ class CommandRegistry:
         self.register("TURBO", cmd_turbo, "YOU GET AN ALU! AND YOU GET AN ALU! EVERYBODY GETS AN ALU!")
         self.register("SLOW", cmd_slow, "ALUs are the Devil's Work")
         self.register("CLS", cmd_cls, "Clear the screen")
-        self.register("CLEAR", cmd_cls, "Clear the screen (alias for CLS)")
+        self.register("CLEAR", cmd_clear, "Clear all variables")
         self.register("MEMORY", cmd_memory, "Display memory map and usage")
         self.register("MAP", cmd_memory, "Display memory map (alias for MEMORY)")
         self.register("DUMP", cmd_dump, "Dump memory contents (DUMP [address])")
@@ -128,6 +128,12 @@ def cmd_slow(repl: ReplProtocol) -> None:
 def cmd_cls(repl: ReplProtocol) -> None:
     """Clear the screen"""
     repl.clear_screen()
+
+
+def cmd_clear(repl: ReplProtocol) -> None:
+    """Clear all variables (BBC BASIC behavior)"""
+    repl.memory_manager.clear_variables()
+    print("Variables cleared")
 
 
 def cmd_memory(repl: ReplProtocol) -> None:
