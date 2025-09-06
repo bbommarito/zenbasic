@@ -130,6 +130,8 @@ class ZenBasicRepl:
             return
             
         print("Running program...")
+        # Get detokenized lines for execution
+        # TODO: In the future, execute directly from tokens for authenticity
         for line_num, code in self.program_store.get_all_lines():
             print(f"Executing line {line_num}: {code}")
             
@@ -140,7 +142,7 @@ class ZenBasicRepl:
                 if self.turbo != transformer.arithmetic.turbo:
                     transformer.arithmetic.set_turbo(self.turbo)
                 result = transformer.transform(tree)
-                if result:  # Only print if there's a result
+                if result is not None:  # Only print if there's a result
                     print(result)
             except Exception as e:
                 print(f"Runtime error at line {line_num}: {e}")

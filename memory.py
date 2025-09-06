@@ -284,6 +284,9 @@ class MemoryManager:
         Format: [next_ptr:2][line_num:2][tokens...][0x0D]
         Returns True if successful, False if out of memory.
         """
+        # For simplicity, we'll add duplicate lines for now
+        # TODO: Implement proper line replacement
+        
         # Calculate space needed: 2 (next) + 2 (line#) + len(tokens) + 1 (EOL)
         line_size = 4 + len(tokens) + 1
         
@@ -298,26 +301,24 @@ class MemoryManager:
         prev_ptr = 0
         curr_ptr = page
         
-        while curr_ptr < self.program_top:
-            # Read line number at current position
-            curr_line_num = self.read_int16(curr_ptr + 2)
-            
-            if curr_line_num == line_num:
-                # Replace existing line - TODO: implement line replacement
-                # For now, we'll delete and re-add
-                self.delete_program_line(line_num)
-                return self.store_program_line(line_num, tokens)
-            elif curr_line_num > line_num:
-                # Insert before this line
-                break
-            
-            # Move to next line
-            prev_ptr = curr_ptr
-            next_ptr = self.read_int16(curr_ptr)
-            if next_ptr == 0:
-                # End of program
-                break
-            curr_ptr = next_ptr
+        # Check if program is empty (program_top == page means no lines stored yet)
+        if self.program_top > page:
+            # Program has lines, traverse them
+            while curr_ptr < self.program_top:
+                # Read line number at current position
+                curr_line_num = self.read_int16(curr_ptr + 2)
+                
+                if curr_line_num > line_num:
+                    # Insert before this line
+                    break
+                
+                # Move to next line
+                prev_ptr = curr_ptr
+                next_ptr = self.read_int16(curr_ptr)
+                if next_ptr == 0:
+                    # End of program
+                    break
+                curr_ptr = next_ptr
         
         # Insert the new line at program_top
         new_line_ptr = self.program_top
@@ -363,6 +364,10 @@ class MemoryManager:
         prev_ptr = 0
         curr_ptr = page
         
+        # Check if program is empty
+        if self.program_top == page:
+            return False  # Empty program, nothing to delete
+            
         while curr_ptr < self.program_top:
             curr_line_num = self.read_int16(curr_ptr + 2)
             
@@ -372,7 +377,9 @@ class MemoryManager:
                 
                 if prev_ptr == 0:
                     # Deleting first line
-                    self.store_int16(HEADER_PAGE, next_ptr if next_ptr else page)
+                    if next_ptr:
+                        self.store_int16(HEADER_PAGE, next_ptr)
+                    # If no next line, program becomes empty but PAGE stays the same
                 else:
                     # Update previous line's next pointer
                     self.store_int16(prev_ptr, next_ptr)
