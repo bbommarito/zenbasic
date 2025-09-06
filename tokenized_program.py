@@ -31,14 +31,11 @@ class TokenizedProgramStore:
             tokens = tokenize_line(cleaned)
             
             # Store in memory
-            if self.memory.store_program_line(line_num, tokens):
-                print(f"Line {line_num} stored")
-            else:
+            if not self.memory.store_program_line(line_num, tokens):
                 print(f"Out of memory! Cannot store line {line_num}")
         else:
             # Empty line deletes the line number
-            if self.memory.delete_program_line(line_num):
-                print(f"Line {line_num} deleted")
+            self.memory.delete_program_line(line_num)
     
     def _strip_whitespace(self, code: str) -> str:
         """
@@ -115,7 +112,6 @@ class TokenizedProgramStore:
     def clear_program(self) -> None:
         """Clear all program lines."""
         self.memory.clear_program()
-        print("Program cleared")
     
     def save_to_file(self, filename: str) -> None:
         """

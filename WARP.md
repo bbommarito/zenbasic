@@ -8,21 +8,19 @@ ZenBasic is a Python-based interpreter for BBC BASIC that recreates the experien
 
 ## Key Architecture
 
-The project follows a classic interpreter architecture:
+The project uses a dual-path execution model:
 
-1. **main.py** - Entry point that instantiates and runs the REPL
-2. **repl.py** - Core REPL implementation handling:
-   - Line number parsing and program storage
-   - Immediate command execution (LIST, RUN, NEW, VARS, QUIT)
-   - Program execution line-by-line
-   - Variable storage as a dictionary
-   - Turbo mode toggle for faster arithmetic
+### Core Components
 
-3. **transformer.py** - Lark-based parser and AST transformer:
-   - Grammar definition for BASIC syntax
-   - Arithmetic operations implemented via loops (add_by_loop, sub_by_loop, multiply_by_addition, div_by_loop)
-   - Turbo mode shortcuts that use native operators
-   - Variable resolution and storage
+1. **main.py** - Entry point
+2. **repl.py** - Main REPL loop and command dispatch
+3. **memory.py** - 64K memory management with authentic address space
+4. **tokens.py** - BBC BASIC token table and tokenization
+5. **tokenized_program.py** - Program storage in tokenized form
+6. **token_executor.py** - Direct token execution (fast path)
+7. **parser.py** - Lark grammar definition (fallback path)
+8. **transformer.py** - AST transformation (fallback path)
+9. **commands.py** - Command registry and handlers
 
 ## Development Commands
 
@@ -41,31 +39,28 @@ pip install lark
 
 ## Development Guidelines
 
-### Parser Modifications
-- Grammar is defined in `BASIC_GRAMMAR` string in transformer.py
-- Use Lark parser syntax for new statements
-- Follow the existing pattern: create grammar rule → implement transformer method
+### Adding New Commands
 
-### Adding New BASIC Commands
-1. For immediate commands: Add to `execute_immediate_command()` in repl.py
-2. For program statements: 
-   - Add grammar rule in transformer.py
-   - Implement corresponding transformer method
-   - Ensure proper variable storage/retrieval
+#### Immediate Commands
+1. Add handler function to `commands.py`
+2. Register in `CommandRegistry.register_built_in_commands()`
 
-### Arithmetic Implementation
-The project intentionally implements arithmetic through loops for authenticity:
-- Addition: Incrementing one-by-one
-- Subtraction: Adding negative numbers
-- Multiplication: Repeated addition
-- Division: Repeated subtraction
+#### Program Statements (e.g., PRINT, IF)
+1. Add token definition to `tokens.py` if needed
+2. Implement in `token_executor.py` for direct execution
+3. Optionally add to parser grammar as fallback
 
-When in turbo mode, operations use native Python operators for speed.
+### Memory Layout
+- Programs stored as tokenized bytes at $1000-$EFFF
+- Variables allocated at $0800-$0FFF
+- Symbol table at $0208-$03FF with O(1) header at $0200
+- Screen memory at $0400-$07FF (future use)
 
-### Variable Handling
-- Variables must be uppercase (enforced by grammar: `/[A-Z][A-Z0-9_]*/`)
-- Stored in `self.variables` dictionary
-- Currently only supports integers
+### Execution Flow
+1. **Tokenization**: Text → Token bytes via `tokenize_line()`
+2. **Storage**: Tokens stored in memory as linked list
+3. **Execution**: Token executor reads bytes directly
+4. **Fallback**: Complex statements fall back to parser
 
 ## Common Tasks
 
@@ -90,14 +85,15 @@ Currently only integers are supported. To add strings:
 
 ### REPL Flow
 1. User input → Parse for line number
-2. If line number: Store in program_lines dict
-3. If immediate: Execute through parser/transformer
-4. RUN command executes stored lines sequentially
+2. If line number: Tokenize and store in memory
+3. If immediate: Execute via command registry or token executor
+4. RUN command executes tokens directly from memory
 
 ### State Management
-- `self.program_lines`: Dict[int, str] - Stores numbered program lines
-- `self.variables`: Dict[str, Any] - Stores variable values
-- `self.turbo`: bool - Performance mode flag
+- **Memory**: 64K bytearray simulating complete address space
+- **Programs**: Stored as tokenized bytes in memory ($1000+)
+- **Variables**: Allocated in memory with symbol table
+- **No dictionaries**: Everything lives in the 64K memory!
 
 ### Error Handling
 - Parser errors are caught and displayed

@@ -54,22 +54,14 @@ class ZenBasicRepl:
         if var_type == 'integer':
             size = 2  # 16-bit integer = 2 bytes
             address = self.memory_manager.allocate_variable(name, size)
-            if new_var:
-                print(f"Allocated {name} at address ${address:04X}")
-                
             # Store the value
             self.memory_manager.store_int16(address, int(value))
-            print(f"Stored {value} in memory at ${address:04X}")
             
         elif var_type == 'float':
             size = 4  # 32-bit float = 4 bytes
             address = self.memory_manager.allocate_variable(name, size)
-            if new_var:
-                print(f"Allocated {name} at address ${address:04X}")
-                
             # Store the value
             self.memory_manager.store_float32(address, float(value))
-            print(f"Stored {value} in memory at ${address:04X}")
     
     def get_variable_value(self, name: str) -> Optional[Tuple[Any, str]]:
         """Get a variable value from memory. Returns (value, type) or None."""
@@ -136,8 +128,6 @@ class ZenBasicRepl:
         token_lines = self.memory_manager.get_program_lines()
         
         for line_num, tokens in token_lines:
-            print(f"Executing line {line_num}")
-            
             try:
                 # Try direct token execution first (fast path)
                 result = self.token_executor.execute_line(tokens)
@@ -145,8 +135,6 @@ class ZenBasicRepl:
                     print(result)
             except NotImplementedError:
                 # Token executor doesn't handle this yet, fall back to parser
-                print(f"  [Falling back to parser for line {line_num}]")
-                
                 # Detokenize and parse the old way
                 from tokens import detokenize
                 code = detokenize(tokens)
