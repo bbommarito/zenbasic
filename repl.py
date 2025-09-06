@@ -6,16 +6,16 @@ from typing import Optional, Any, Tuple
 from transformer import BasicTransformer
 from parser import BasicParser, exceptions
 from memory import MemoryManager
-from program import ProgramStore
+from tokenized_program import TokenizedProgramStore
 from commands import CommandRegistry
 
 class ZenBasicRepl:
     def __init__(self):
-        self.program_store = ProgramStore()  # Line-numbered program storage
         self.running = True
         self.parser = BasicParser()
         self.turbo = False
         self.memory_manager = MemoryManager()
+        self.program_store = TokenizedProgramStore(self.memory_manager)  # Now uses actual memory!
         self.command_registry = CommandRegistry()
 
     def print_banner(self):
@@ -39,8 +39,8 @@ class ZenBasicRepl:
         return None, line
 
     def store_program_line(self, line_num: int, code: str):
-        """Store a numbered program line"""
-        print(f"Storing line {line_num}: {code}")
+        """Store a numbered program line (tokenized in memory now!)"""
+        # Goodbye whitespace, hello tokens!
         self.program_store.add_line(line_num, code)
 
     def store_variable_in_memory(self, name: str, value: Any, var_type: str) -> None:

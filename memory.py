@@ -28,8 +28,11 @@ SYMBOL_TABLE_END = SYSTEM_END
 HEADER_VAR_COUNT = 0x0200      # 16-bit: Number of variables
 HEADER_NEXT_SYMBOL = 0x0202    # 16-bit: Offset to next free symbol slot
 HEADER_NEXT_VAR = 0x0204       # 16-bit: Next free variable address
-HEADER_RESERVED = 0x0206       # 16-bit: Reserved for future use
+HEADER_PAGE = 0x0206           # 16-bit: Start of BASIC program (PAGE)
 SYMBOL_DATA_START = 0x0208     # Actual symbol entries start here
+
+# Program storage
+DEFAULT_PAGE = PROGRAM_START   # Default PAGE value (0x1000)
 
 class MemoryManager:
     """Manages the 64K memory space for ZenBasic"""
@@ -42,7 +45,10 @@ class MemoryManager:
         self.store_int16(HEADER_VAR_COUNT, 0)
         self.store_int16(HEADER_NEXT_SYMBOL, SYMBOL_DATA_START)
         self.store_int16(HEADER_NEXT_VAR, VARS_START)
-        self.store_int16(HEADER_RESERVED, 0)
+        self.store_int16(HEADER_PAGE, DEFAULT_PAGE)  # Start of BASIC program
+        
+        # Initialize program storage
+        self.program_top = DEFAULT_PAGE  # Current end of program
     
     def store_int16(self, address: int, value: int) -> None:
         """Store 16-bit integer at address, little endian"""
@@ -271,6 +277,154 @@ class MemoryManager:
             ptr = ptr + 1 + name_len + 2 + 1
             
         print(f"\nSymbol table uses {next_symbol_address - SYMBOL_DATA_START} bytes")
+    
+    def store_program_line(self, line_num: int, tokens: bytes) -> bool:
+        """
+        Store a tokenized program line in memory.
+        Format: [next_ptr:2][line_num:2][tokens...][0x0D]
+        Returns True if successful, False if out of memory.
+        """
+        # Calculate space needed: 2 (next) + 2 (line#) + len(tokens) + 1 (EOL)
+        line_size = 4 + len(tokens) + 1
+        
+        # Check if we have space
+        if self.program_top + line_size > PROGRAM_END:
+            return False
+        
+        # Get PAGE pointer
+        page = self.read_int16(HEADER_PAGE)
+        
+        # Find where to insert this line (sorted by line number)
+        prev_ptr = 0
+        curr_ptr = page
+        
+        while curr_ptr < self.program_top:
+            # Read line number at current position
+            curr_line_num = self.read_int16(curr_ptr + 2)
+            
+            if curr_line_num == line_num:
+                # Replace existing line - TODO: implement line replacement
+                # For now, we'll delete and re-add
+                self.delete_program_line(line_num)
+                return self.store_program_line(line_num, tokens)
+            elif curr_line_num > line_num:
+                # Insert before this line
+                break
+            
+            # Move to next line
+            prev_ptr = curr_ptr
+            next_ptr = self.read_int16(curr_ptr)
+            if next_ptr == 0:
+                # End of program
+                break
+            curr_ptr = next_ptr
+        
+        # Insert the new line at program_top
+        new_line_ptr = self.program_top
+        
+        # Write the line structure
+        self.store_int16(new_line_ptr, 0)  # Will update next pointer later
+        self.store_int16(new_line_ptr + 2, line_num)
+        
+        # Write tokens
+        for i, byte in enumerate(tokens):
+            self.memory[new_line_ptr + 4 + i] = byte
+        
+        # Write end-of-line marker
+        self.memory[new_line_ptr + 4 + len(tokens)] = 0x0D
+        
+        # Update pointers
+        if prev_ptr == 0:
+            # This is the first line or insert at beginning
+            if curr_ptr == page and self.program_top == page:
+                # Very first line
+                self.store_int16(new_line_ptr, 0)  # No next line
+            else:
+                # Insert at beginning
+                self.store_int16(new_line_ptr, curr_ptr)  # Point to old first
+                self.store_int16(HEADER_PAGE, new_line_ptr)  # Update PAGE
+        else:
+            # Insert in middle or at end
+            next_of_prev = self.read_int16(prev_ptr)
+            self.store_int16(prev_ptr, new_line_ptr)  # Previous points to new
+            self.store_int16(new_line_ptr, next_of_prev)  # New points to next
+        
+        # Update program_top
+        self.program_top = new_line_ptr + line_size
+        
+        return True
+    
+    def delete_program_line(self, line_num: int) -> bool:
+        """
+        Delete a program line from memory.
+        Returns True if line was found and deleted.
+        """
+        page = self.read_int16(HEADER_PAGE)
+        prev_ptr = 0
+        curr_ptr = page
+        
+        while curr_ptr < self.program_top:
+            curr_line_num = self.read_int16(curr_ptr + 2)
+            
+            if curr_line_num == line_num:
+                # Found the line to delete
+                next_ptr = self.read_int16(curr_ptr)
+                
+                if prev_ptr == 0:
+                    # Deleting first line
+                    self.store_int16(HEADER_PAGE, next_ptr if next_ptr else page)
+                else:
+                    # Update previous line's next pointer
+                    self.store_int16(prev_ptr, next_ptr)
+                
+                # Note: We don't actually reclaim memory here (like real BASIC)
+                # Could implement compaction later
+                return True
+            
+            prev_ptr = curr_ptr
+            next_ptr = self.read_int16(curr_ptr)
+            if next_ptr == 0:
+                break
+            curr_ptr = next_ptr
+        
+        return False
+    
+    def get_program_lines(self) -> list[tuple[int, bytes]]:
+        """
+        Get all program lines from memory.
+        Returns list of (line_number, tokenized_bytes) tuples.
+        """
+        lines = []
+        page = self.read_int16(HEADER_PAGE)
+        curr_ptr = page
+        
+        while curr_ptr < self.program_top:
+            # Read line number
+            line_num = self.read_int16(curr_ptr + 2)
+            
+            # Read tokens until EOL
+            tokens = []
+            i = curr_ptr + 4
+            while i < self.program_top and self.memory[i] != 0x0D:
+                tokens.append(self.memory[i])
+                i += 1
+            
+            lines.append((line_num, bytes(tokens)))
+            
+            # Move to next line
+            next_ptr = self.read_int16(curr_ptr)
+            if next_ptr == 0:
+                break
+            curr_ptr = next_ptr
+        
+        return lines
+    
+    def clear_program(self) -> None:
+        """Clear the stored BASIC program."""
+        page = self.read_int16(HEADER_PAGE)
+        self.program_top = page
+        # Clear first word to indicate empty program
+        self.store_int16(page, 0)
     
     def get_memory_map_info(self) -> str:
         """Return human-readable memory map information"""
