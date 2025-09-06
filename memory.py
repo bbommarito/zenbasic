@@ -24,14 +24,25 @@ HARDWARE_END = 0xFFFF
 SYMBOL_TABLE_START = SYSTEM_START
 SYMBOL_TABLE_END = SYSTEM_END
 
+# Memory header structure at 0x0200
+HEADER_VAR_COUNT = 0x0200      # 16-bit: Number of variables
+HEADER_NEXT_SYMBOL = 0x0202    # 16-bit: Offset to next free symbol slot
+HEADER_NEXT_VAR = 0x0204       # 16-bit: Next free variable address
+HEADER_RESERVED = 0x0206       # 16-bit: Reserved for future use
+SYMBOL_DATA_START = 0x0208     # Actual symbol entries start here
+
 class MemoryManager:
     """Manages the 64K memory space for ZenBasic"""
     
     def __init__(self, size: int = 65536):
         self.memory = bytearray(size)
         self.size = size
-        self.next_var_address = VARS_START
-        self.next_symbol_address = SYMBOL_TABLE_START  # Where to write next symbol
+        
+        # Initialize header
+        self.store_int16(HEADER_VAR_COUNT, 0)
+        self.store_int16(HEADER_NEXT_SYMBOL, SYMBOL_DATA_START)
+        self.store_int16(HEADER_NEXT_VAR, VARS_START)
+        self.store_int16(HEADER_RESERVED, 0)
     
     def store_int16(self, address: int, value: int) -> None:
         """Store 16-bit integer at address, little endian"""
@@ -82,18 +93,27 @@ class MemoryManager:
             # Variable already exists in symbol table
             return symbol_info[0]
         
+        # Get current next variable address from header
+        next_var_address = self.read_int16(HEADER_NEXT_VAR)
+        
         # Check if we have enough space
-        if self.next_var_address + size > VARS_END:
+        if next_var_address + size > VARS_END:
             raise MemoryError(f"Variable storage full! Cannot allocate {size} bytes for {name}")
         
         # Allocate the space
-        address = self.next_var_address
-        self.next_var_address += size
+        address = next_var_address
+        
+        # Update next variable address in header
+        self.store_int16(HEADER_NEXT_VAR, next_var_address + size)
         
         # Write to symbol table
         symbol_addr = self.write_symbol_entry(name, address, size)
         if symbol_addr is None:
             raise MemoryError(f"Symbol table full! Cannot store entry for {name}")
+        
+        # Increment variable count in header
+        var_count = self.read_int16(HEADER_VAR_COUNT)
+        self.store_int16(HEADER_VAR_COUNT, var_count + 1)
         
         return address
     
@@ -120,19 +140,24 @@ class MemoryManager:
     
     def clear_variables(self) -> None:
         """Clear variable allocation table (but not the memory itself)"""
-        self.next_var_address = VARS_START
-        self.next_symbol_address = SYMBOL_TABLE_START
+        # Reset header values
+        self.store_int16(HEADER_VAR_COUNT, 0)
+        self.store_int16(HEADER_NEXT_SYMBOL, SYMBOL_DATA_START)
+        self.store_int16(HEADER_NEXT_VAR, VARS_START)
     
     def write_symbol_entry(self, name: str, address: int, size: int) -> Optional[int]:
         """Write a symbol table entry to memory. Returns address of entry or None if no space."""
         name_bytes = name.encode('ascii')
         entry_size = 1 + len(name_bytes) + 2 + 1  # length + name + address + size
         
+        # Get next symbol address from header
+        next_symbol_address = self.read_int16(HEADER_NEXT_SYMBOL)
+        
         # Check if we have room
-        if self.next_symbol_address + entry_size > SYMBOL_TABLE_END:
+        if next_symbol_address + entry_size > SYMBOL_TABLE_END:
             return None
             
-        entry_addr = self.next_symbol_address
+        entry_addr = next_symbol_address
         
         # Write the entry
         ptr = entry_addr
@@ -151,15 +176,17 @@ class MemoryManager:
         self.memory[ptr] = size  # Variable size
         ptr += 1
         
-        self.next_symbol_address = ptr
+        # Update next symbol address in header
+        self.store_int16(HEADER_NEXT_SYMBOL, ptr)
         return entry_addr
     
     def find_symbol(self, name: str) -> Optional[Tuple[int, int]]:
         """Find a symbol in the symbol table. Returns (address, size) or None."""
         name_bytes = name.encode('ascii')
-        ptr = SYMBOL_TABLE_START
+        ptr = SYMBOL_DATA_START
+        next_symbol_address = self.read_int16(HEADER_NEXT_SYMBOL)
         
-        while ptr < self.next_symbol_address:
+        while ptr < next_symbol_address:
             name_len = self.memory[ptr]
             if name_len == 0:  # End of table marker
                 break
@@ -189,9 +216,10 @@ class MemoryManager:
     def get_all_symbols(self) -> list[tuple[str, int, int]]:
         """Get all symbols from the symbol table. Returns list of (name, address, size)."""
         symbols = []
-        ptr = SYMBOL_TABLE_START
+        ptr = SYMBOL_DATA_START
+        next_symbol_address = self.read_int16(HEADER_NEXT_SYMBOL)
         
-        while ptr < self.next_symbol_address:
+        while ptr < next_symbol_address:
             name_len = self.memory[ptr]
             if name_len == 0:
                 break
@@ -213,10 +241,18 @@ class MemoryManager:
     
     def dump_symbol_table(self) -> None:
         """Dump the symbol table for debugging."""
-        print(f"Symbol table at ${SYMBOL_TABLE_START:04X}:")
-        ptr = SYMBOL_TABLE_START
+        var_count = self.read_int16(HEADER_VAR_COUNT)
+        next_symbol_address = self.read_int16(HEADER_NEXT_SYMBOL)
         
-        while ptr < self.next_symbol_address:
+        print(f"Symbol table header:")
+        print(f"  Variable count: {var_count}")
+        print(f"  Next symbol offset: ${next_symbol_address:04X}")
+        print(f"  Next variable address: ${self.read_int16(HEADER_NEXT_VAR):04X}")
+        print(f"\nSymbol table entries at ${SYMBOL_DATA_START:04X}:")
+        
+        ptr = SYMBOL_DATA_START
+        
+        while ptr < next_symbol_address:
             name_len = self.memory[ptr]
             if name_len == 0:
                 break
@@ -234,18 +270,29 @@ class MemoryManager:
             # Move to next entry
             ptr = ptr + 1 + name_len + 2 + 1
             
-        print(f"Symbol table uses {self.next_symbol_address - SYMBOL_TABLE_START} bytes")
+        print(f"\nSymbol table uses {next_symbol_address - SYMBOL_DATA_START} bytes")
     
     def get_memory_map_info(self) -> str:
         """Return human-readable memory map information"""
-        symbols_used = self.next_symbol_address - SYMBOL_TABLE_START
+        # Read values from header
+        var_count = self.read_int16(HEADER_VAR_COUNT)
+        next_symbol = self.read_int16(HEADER_NEXT_SYMBOL)
+        next_var_addr = self.read_int16(HEADER_NEXT_VAR)
+        
+        symbols_used = next_symbol - SYMBOL_DATA_START
+        vars_used = next_var_addr - VARS_START
+        
         return f"""Memory Map:
 $0000-$00FF  Zero Page ({ZERO_PAGE_END - ZERO_PAGE_START + 1} bytes)
 $0100-$01FF  Stack ({STACK_END - STACK_START + 1} bytes)
-$0200-$03FF  System Area ({SYSTEM_END - SYSTEM_START + 1} bytes) - Symbols: {symbols_used} bytes used
+$0200-$03FF  System Area ({SYSTEM_END - SYSTEM_START + 1} bytes)
+             Header: 8 bytes, Symbols: {symbols_used} bytes used
 $0400-$07FF  Screen Memory ({SCREEN_END - SCREEN_START + 1} bytes)
 $0800-$0FFF  Variable Storage ({VARS_END - VARS_START + 1} bytes)
 $1000-$EFFF  Program Memory ({PROGRAM_END - PROGRAM_START + 1} bytes)
 $F000-$FFFF  Hardware Registers ({HARDWARE_END - HARDWARE_START + 1} bytes)
 
-Variable allocation: ${self.next_var_address:04X} (${self.next_var_address - VARS_START} bytes used)"""
+Statistics:
+  Variables defined: {var_count}
+  Variable memory: ${next_var_addr:04X} ({vars_used} bytes used, {VARS_END - next_var_addr + 1} bytes free)
+  Symbol table: {symbols_used} bytes used"""

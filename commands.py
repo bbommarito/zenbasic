@@ -145,12 +145,15 @@ def cmd_dump(repl: ReplProtocol, command_line: str) -> None:
     parts = command_line.split()
     if len(parts) >= 2:
         try:
-            # Support hex (0x prefix, & prefix) or decimal
+            # Support hex (0x prefix, & prefix, $ prefix) or decimal
             addr_str = parts[1]
             if addr_str.startswith('0x') or addr_str.startswith('0X'):
                 start_addr = int(addr_str, 16)
             elif addr_str.startswith('&'):
                 # BBC BASIC style hex
+                start_addr = int(addr_str[1:], 16)
+            elif addr_str.startswith('$'):
+                # 6502 assembly style hex
                 start_addr = int(addr_str[1:], 16)
             else:
                 start_addr = int(addr_str)
