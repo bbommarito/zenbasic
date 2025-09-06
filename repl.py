@@ -1,7 +1,7 @@
 import re
 import subprocess
 import os
-from typing import Dict, Optional, Any, Tuple
+from typing import Optional, Any, Tuple
 
 from transformer import BasicTransformer
 from parser import BasicParser, exceptions
@@ -12,7 +12,6 @@ from commands import CommandRegistry
 class ZenBasicRepl:
     def __init__(self):
         self.program_store = ProgramStore()  # Line-numbered program storage
-        self.variables: Dict[str, Tuple[Any, str]] = {}      # Variable storage
         self.running = True
         self.parser = BasicParser()
         self.turbo = False
@@ -46,10 +45,14 @@ class ZenBasicRepl:
 
     def store_variable_in_memory(self, name: str, value: Any, var_type: str) -> None:
         """Store a variable in memory using the memory manager"""
+        # Check if variable already exists
+        existing = self.memory_manager.find_symbol(name)
+        new_var = existing is None
+        
         if var_type == 'integer':
             size = 2  # 16-bit integer = 2 bytes
             address = self.memory_manager.allocate_variable(name, size)
-            if name not in self.variables:
+            if new_var:
                 print(f"Allocated {name} at address ${address:04X}")
                 
             # Store the value
@@ -59,12 +62,33 @@ class ZenBasicRepl:
         elif var_type == 'float':
             size = 4  # 32-bit float = 4 bytes
             address = self.memory_manager.allocate_variable(name, size)
-            if name not in self.variables:
+            if new_var:
                 print(f"Allocated {name} at address ${address:04X}")
                 
             # Store the value
             self.memory_manager.store_float32(address, float(value))
             print(f"Stored {value} in memory at ${address:04X}")
+    
+    def get_variable_value(self, name: str) -> Optional[Tuple[Any, str]]:
+        """Get a variable value from memory. Returns (value, type) or None."""
+        symbol_info = self.memory_manager.find_symbol(name)
+        if not symbol_info:
+            return None
+            
+        address, size = symbol_info
+        
+        # Determine type based on variable name and size
+        if name.endswith('%'):
+            # Integer variable
+            value = self.memory_manager.read_int16(address)
+            return (value, 'integer')
+        elif name.endswith('$'):
+            # String variable (not implemented yet)
+            return ('', 'string')
+        else:
+            # Float variable
+            value = self.memory_manager.read_float32(address)
+            return (value, 'float')
 
 
     def execute_immediate_command(self, command: str):
@@ -74,8 +98,7 @@ class ZenBasicRepl:
             # Not a built-in command, try to parse as BASIC statement
             try:
                 tree = self.parser.parse(command)
-                transformer = BasicTransformer(self.variables, self.turbo)
-                transformer.repl_instance = self
+                transformer = BasicTransformer(self, self.turbo)
                 if self.turbo != transformer.arithmetic.turbo:
                     transformer.arithmetic.set_turbo(self.turbo)
                 result = transformer.transform(tree)
@@ -88,13 +111,17 @@ class ZenBasicRepl:
 
     def list_variables(self):
         """List current variables and their values"""
-        if not self.variables:
+        symbols = self.memory_manager.get_all_symbols()
+        if not symbols:
             print("No variables set")
             return
             
         print("Variables:")
-        for var_name, value in sorted(self.variables.items()):
-            print(f"{var_name} = {value[0]}")
+        for var_name, address, size in sorted(symbols):
+            var_info = self.get_variable_value(var_name)
+            if var_info:
+                value, _ = var_info
+                print(f"{var_name} = {value}")
     
     def run_program(self):
         """Run the stored program"""
@@ -109,8 +136,7 @@ class ZenBasicRepl:
             # Try to execute the code using our parser
             try:
                 tree = self.parser.parse(code)
-                transformer = BasicTransformer(self.variables, self.turbo)
-                transformer.repl_instance = self
+                transformer = BasicTransformer(self, self.turbo)
                 if self.turbo != transformer.arithmetic.turbo:
                     transformer.arithmetic.set_turbo(self.turbo)
                 result = transformer.transform(tree)
@@ -123,7 +149,6 @@ class ZenBasicRepl:
     def new_program(self):
         """Clear the current program"""
         self.program_store.clear_program()
-        self.variables.clear()
         self.memory_manager.clear_variables()
 
     def clear_screen(self):

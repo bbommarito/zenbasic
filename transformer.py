@@ -8,10 +8,9 @@ if TYPE_CHECKING:
     from repl import ZenBasicRepl
 
 class BasicTransformer(Transformer[Any, Any]):
-    def __init__(self, variables: Dict[str, Tuple[Any, str]], turbo: bool = False):
-        self.variables = variables
+    def __init__(self, repl_instance=None, turbo: bool = False):
+        self.repl_instance = repl_instance
         self.turbo = turbo
-        self.repl_instance: Union[ZenBasicRepl, None] = None
         self.arithmetic = AuthenticArithmetic(turbo)
 
     def let_statement(self, items: List[Any]) -> str:
@@ -24,25 +23,30 @@ class BasicTransformer(Transformer[Any, Any]):
             value = expression_result
     
         self.set_variable(var_name, value)
-        return f"Variable {var_name} set to {self.variables[var_name][0]}"
+        return f"Variable {var_name} set to {value}"
 
     def set_variable(self, name: str, value: Any):
+        if not self.repl_instance:
+            raise RuntimeError("No REPL instance available")
+            
         if name.endswith('%'):
-            self.variables[name] = (int(value), 'integer')
-            
-            if hasattr(self, 'repl_instance') and self.repl_instance:  # We'll pass this reference
-                self.repl_instance.store_variable_in_memory(name, int(value), 'integer')
+            self.repl_instance.store_variable_in_memory(name, int(value), 'integer')
         elif name.endswith('$'):
-            self.variables[name] = (str(value), 'string')
+            # String storage not implemented yet
+            pass
         else:
-            self.variables[name] = (float(value), 'float')
-            
-            if hasattr(self, 'repl_instance') and self.repl_instance:
-                self.repl_instance.store_variable_in_memory(name, float(value), 'float')
+            self.repl_instance.store_variable_in_memory(name, float(value), 'float')
 
     def get_variable(self, name: str):
-        value, var_type = self.variables.get(name, (0, 'float'))
-        return value, var_type
+        if not self.repl_instance:
+            raise RuntimeError("No REPL instance available")
+            
+        var_info = self.repl_instance.get_variable_value(name)
+        if var_info:
+            return var_info
+        else:
+            # Variable not found, return default
+            return (0, 'float')
 
     def add(self, items: List[Any]) -> Tuple[Union[int, float], str]:
         left_val, left_type = items[0]

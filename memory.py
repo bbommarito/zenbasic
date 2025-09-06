@@ -31,7 +31,6 @@ class MemoryManager:
         self.memory = bytearray(size)
         self.size = size
         self.next_var_address = VARS_START
-        self.var_table: dict[str, Tuple[int, int]] = {}  # name -> (address, size)
         self.next_symbol_address = SYMBOL_TABLE_START  # Where to write next symbol
     
     def store_int16(self, address: int, value: int) -> None:
@@ -95,9 +94,6 @@ class MemoryManager:
         symbol_addr = self.write_symbol_entry(name, address, size)
         if symbol_addr is None:
             raise MemoryError(f"Symbol table full! Cannot store entry for {name}")
-            
-        # Keep Python dict for backward compatibility (for now)
-        self.var_table[name] = (address, size)
         
         return address
     
@@ -124,7 +120,6 @@ class MemoryManager:
     
     def clear_variables(self) -> None:
         """Clear variable allocation table (but not the memory itself)"""
-        self.var_table.clear()
         self.next_var_address = VARS_START
         self.next_symbol_address = SYMBOL_TABLE_START
     
@@ -190,6 +185,31 @@ class MemoryManager:
             ptr = ptr + 1 + name_len + 2 + 1
             
         return None
+    
+    def get_all_symbols(self) -> list[tuple[str, int, int]]:
+        """Get all symbols from the symbol table. Returns list of (name, address, size)."""
+        symbols = []
+        ptr = SYMBOL_TABLE_START
+        
+        while ptr < self.next_symbol_address:
+            name_len = self.memory[ptr]
+            if name_len == 0:
+                break
+                
+            # Read name
+            name = ''.join(chr(self.memory[ptr + 1 + i]) for i in range(name_len))
+            
+            # Read address and size
+            addr_ptr = ptr + 1 + name_len
+            address = self.memory[addr_ptr] | (self.memory[addr_ptr + 1] << 8)
+            size = self.memory[addr_ptr + 2]
+            
+            symbols.append((name, address, size))
+            
+            # Move to next entry
+            ptr = ptr + 1 + name_len + 2 + 1
+            
+        return symbols
     
     def dump_symbol_table(self) -> None:
         """Dump the symbol table for debugging."""
