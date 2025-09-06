@@ -284,9 +284,38 @@ class MemoryManager:
         Format: [next_ptr:2][line_num:2][tokens...][0x0D]
         Returns True if successful, False if out of memory.
         """
-        # For simplicity, we'll add duplicate lines for now
-        # TODO: Implement proper line replacement
+        # Check if line already exists and needs replacement
+        existing_lines = self.get_program_lines()
+        needs_rebuild = any(line[0] == line_num for line in existing_lines)
         
+        if needs_rebuild:
+            # Rebuild program without the old line
+            new_lines = [(num, toks) for num, toks in existing_lines if num != line_num]
+            # Add the new line in the right position
+            inserted = False
+            result = []
+            for num, toks in new_lines:
+                if not inserted and num > line_num:
+                    result.append((line_num, tokens))
+                    inserted = True
+                result.append((num, toks))
+            if not inserted:
+                result.append((line_num, tokens))
+            
+            # Clear and rebuild the program
+            self.clear_program()
+            for num, toks in result:
+                if not self._store_program_line_internal(num, toks):
+                    return False
+            return True
+        else:
+            # No replacement needed, just insert
+            return self._store_program_line_internal(line_num, tokens)
+    
+    def _store_program_line_internal(self, line_num: int, tokens: bytes) -> bool:
+        """
+        Internal method to store a line without checking for duplicates.
+        """
         # Calculate space needed: 2 (next) + 2 (line#) + len(tokens) + 1 (EOL)
         line_size = 4 + len(tokens) + 1
         
