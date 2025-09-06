@@ -153,12 +153,6 @@ TOKENS = {
     0xFF: "VARS",    # Our addition
 }
 
-# Reverse mapping for tokenization
-KEYWORDS_TO_TOKENS = {keyword: token for token, keyword in TOKENS.items() if keyword != "<line>"}
-
-# Add our ZenBasic specific mappings
-KEYWORDS_TO_TOKENS.update(ZENBASIC_TOKENS)
-
 # Special tokens
 TOKEN_LINE_NUM = 0x8D  # Followed by 2-byte line number
 TOKEN_EOL = 0x0D       # End of line marker (carriage return)
@@ -180,6 +174,15 @@ ZENBASIC_TOKENS = {
 
 # Note: Our CLEAR is an alias for CLS (0xD4), not BBC's CLEAR (0xD1)
 # BBC's CLEAR cleared variables, ours clears the screen
+
+# Reverse mapping for tokenization
+KEYWORDS_TO_TOKENS = {keyword: token for token, keyword in TOKENS.items() if keyword != "<line>"}
+
+# Add our ZenBasic specific mappings
+KEYWORDS_TO_TOKENS.update(ZENBASIC_TOKENS)
+
+# Handle CLEAR properly - it clears variables (0xD1), not screen
+# CLS clears the screen (0xD4)
 
 def tokenize_line(line: str) -> bytes:
     """

@@ -44,13 +44,16 @@ class TokenizedProgramStore:
         """
         Strip unnecessary whitespace while preserving strings and REM comments.
         This is where dreams of readable code go to die.
+        But we'll at least keep spaces around operators for readability.
         """
         result = []
         in_string = False
         in_rem = False
-        prev_char = ''
+        i = 0
         
-        for char in code:
+        while i < len(code):
+            char = code[i]
+            
             if char == '"' and not in_rem:
                 in_string = not in_string
                 result.append(char)
@@ -58,19 +61,27 @@ class TokenizedProgramStore:
                 # Keep everything in strings and after REM
                 result.append(char)
             elif char in ' \t':
-                # Skip whitespace unless it's needed for separation
-                if prev_char and prev_char not in ' \t=+-*/()<>':
-                    # Might need a space here for keyword separation
-                    if result and result[-1] not in ' \t':
+                # Look ahead and behind to decide if we need this space
+                prev_char = result[-1] if result else ''
+                next_char = code[i + 1] if i + 1 < len(code) else ''
+                
+                # Keep space around operators for readability
+                if prev_char in '=<>+-*/' or next_char in '=<>+-*/':
+                    if result and result[-1] != ' ':
+                        result.append(' ')
+                # Keep space between keywords/identifiers
+                elif prev_char.isalnum() and next_char.isalpha():
+                    if result and result[-1] != ' ':
                         result.append(' ')
             else:
                 result.append(char)
-                # Check if we just started a REM statement
-                if len(result) >= 3 and ''.join(result[-3:]).upper() == 'REM':
-                    in_rem = True
+                # Check if we just completed REM keyword
+                if len(result) >= 3:
+                    last_three = ''.join(result[-3:])
+                    if last_three.upper() == 'REM' and (len(result) == 3 or not result[-4].isalpha()):
+                        in_rem = True
             
-            if char not in ' \t':
-                prev_char = char
+            i += 1
         
         return ''.join(result).strip()
     
