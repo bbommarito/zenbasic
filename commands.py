@@ -84,6 +84,7 @@ class CommandRegistry:
         self.register("MEMORY", cmd_memory, "Display memory map and usage")
         self.register("MAP", cmd_memory, "Display memory map (alias for MEMORY)")
         self.register("DUMP", cmd_dump, "Dump memory contents (DUMP [address])")
+        self.register("SYMBOLS", cmd_symbols, "Display symbol table")
         self.register("SAVE", cmd_save, "Save program to file (SAVE filename)")
         self.register("QUIT", cmd_quit, "Exit the interpreter")
         self.register("EXIT", cmd_quit, "Exit the interpreter (alias for QUIT)")
@@ -132,6 +133,11 @@ def cmd_cls(repl: ReplProtocol) -> None:
 def cmd_memory(repl: ReplProtocol) -> None:
     """Display memory map and usage"""
     print(repl.memory_manager.get_memory_map_info())
+
+
+def cmd_symbols(repl: ReplProtocol) -> None:
+    """Display symbol table"""
+    repl.memory_manager.dump_symbol_table()
 
 
 def cmd_dump(repl: ReplProtocol, command_line: str) -> None:
