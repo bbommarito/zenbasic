@@ -8,15 +8,17 @@ from parser import BasicParser, exceptions
 from memory import MemoryManager
 from tokenized_program import TokenizedProgramStore
 from commands import CommandRegistry
+from token_executor import TokenExecutor
 
 class ZenBasicRepl:
     def __init__(self):
         self.running = True
         self.parser = BasicParser()
-        self.turbo = False
+        self.turbo = False  # RIP turbo mode, we have a co-processor now!
         self.memory_manager = MemoryManager()
         self.program_store = TokenizedProgramStore(self.memory_manager)  # Now uses actual memory!
         self.command_registry = CommandRegistry()
+        self.token_executor = TokenExecutor(self)  # Direct token execution!
 
     def print_banner(self):
         """Print startup banner like original BBC BASIC"""
@@ -130,23 +132,39 @@ class ZenBasicRepl:
             return
             
         print("Running program...")
-        # Get detokenized lines for execution
-        # TODO: In the future, execute directly from tokens for authenticity
-        for line_num, code in self.program_store.get_all_lines():
-            print(f"Executing line {line_num}: {code}")
+        # Get raw tokenized lines for direct execution
+        token_lines = self.memory_manager.get_program_lines()
+        
+        for line_num, tokens in token_lines:
+            print(f"Executing line {line_num}")
             
-            # Try to execute the code using our parser
             try:
-                tree = self.parser.parse(code)
-                transformer = BasicTransformer(self, self.turbo)
-                if self.turbo != transformer.arithmetic.turbo:
-                    transformer.arithmetic.set_turbo(self.turbo)
-                result = transformer.transform(tree)
-                if result is not None:  # Only print if there's a result
+                # Try direct token execution first (fast path)
+                result = self.token_executor.execute_line(tokens)
+                if result is not None:
                     print(result)
+            except NotImplementedError:
+                # Token executor doesn't handle this yet, fall back to parser
+                print(f"  [Falling back to parser for line {line_num}]")
+                
+                # Detokenize and parse the old way
+                from tokens import detokenize
+                code = detokenize(tokens)
+                
+                try:
+                    tree = self.parser.parse(code)
+                    transformer = BasicTransformer(self, self.turbo)
+                    if self.turbo != transformer.arithmetic.turbo:
+                        transformer.arithmetic.set_turbo(self.turbo)
+                    result = transformer.transform(tree)
+                    if result is not None:
+                        print(result)
+                except Exception as e:
+                    print(f"Runtime error at line {line_num}: {e}")
+                    break
             except Exception as e:
                 print(f"Runtime error at line {line_num}: {e}")
-                break  # Stop execution on error
+                break
     
     def new_program(self):
         """Clear the current program"""
