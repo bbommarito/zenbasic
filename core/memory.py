@@ -486,3 +486,70 @@ Statistics:
   Variables defined: {var_count}
   Variable memory: ${next_var_addr:04X} ({vars_used} bytes used, {VARS_END - next_var_addr + 1} bytes free)
   Symbol table: {symbols_used} bytes used"""
+    
+    # Screen memory methods
+    def clear_screen(self) -> None:
+        """Clear screen memory (fill with spaces)."""
+        for addr in range(SCREEN_START, SCREEN_END + 1):
+            self.memory[addr] = 0x20  # ASCII space
+        self.screen_cursor = SCREEN_START
+    
+    def write_to_screen(self, char: str) -> None:
+        """Write a character to screen memory at cursor position."""
+        if not hasattr(self, 'screen_cursor'):
+            self.screen_cursor = SCREEN_START
+        
+        if len(char) == 0:
+            return
+            
+        char_code = ord(char[0])
+        
+        if char == '\n':
+            # Move to start of next line
+            current_pos = self.screen_cursor - SCREEN_START
+            current_row = current_pos // 40
+            next_row = current_row + 1
+            if next_row >= 25:
+                # Scroll screen up
+                self.scroll_screen()
+                self.screen_cursor = SCREEN_START + (24 * 40)
+            else:
+                self.screen_cursor = SCREEN_START + (next_row * 40)
+        else:
+            # Write character at cursor
+            if self.screen_cursor <= SCREEN_END:
+                self.memory[self.screen_cursor] = char_code
+                self.screen_cursor += 1
+                
+                # Wrap to next line if needed
+                if self.screen_cursor > SCREEN_END:
+                    self.scroll_screen()
+                    self.screen_cursor = SCREEN_START + (24 * 40)
+    
+    def scroll_screen(self) -> None:
+        """Scroll screen memory up one line."""
+        # Copy lines 1-24 to lines 0-23
+        for row in range(24):
+            for col in range(40):
+                src_addr = SCREEN_START + ((row + 1) * 40) + col
+                dst_addr = SCREEN_START + (row * 40) + col
+                self.memory[dst_addr] = self.memory[src_addr]
+        
+        # Clear line 24
+        for col in range(40):
+            self.memory[SCREEN_START + (24 * 40) + col] = 0x20
+    
+    def get_screen_text(self) -> str:
+        """Get the current screen contents as text."""
+        lines = []
+        for row in range(25):
+            line = []
+            for col in range(40):
+                addr = SCREEN_START + (row * 40) + col
+                char_code = self.memory[addr]
+                if 32 <= char_code <= 126:
+                    line.append(chr(char_code))
+                else:
+                    line.append(' ')
+            lines.append(''.join(line).rstrip())
+        return '\n'.join(lines).rstrip()
