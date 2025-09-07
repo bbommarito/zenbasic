@@ -494,37 +494,34 @@ Statistics:
             self.memory[addr] = 0x20  # ASCII space
         self.screen_cursor = SCREEN_START
     
-    def write_to_screen(self, char: str) -> None:
-        """Write a character to screen memory at cursor position."""
+    def write_to_screen(self, text: str) -> None:
+        """Write text to screen memory at cursor position."""
         if not hasattr(self, 'screen_cursor'):
             self.screen_cursor = SCREEN_START
         
-        if len(char) == 0:
-            return
-            
-        char_code = ord(char[0])
-        
-        if char == '\n':
-            # Move to start of next line
-            current_pos = self.screen_cursor - SCREEN_START
-            current_row = current_pos // 40
-            next_row = current_row + 1
-            if next_row >= 25:
-                # Scroll screen up
-                self.scroll_screen()
-                self.screen_cursor = SCREEN_START + (24 * 40)
-            else:
-                self.screen_cursor = SCREEN_START + (next_row * 40)
-        else:
-            # Write character at cursor
-            if self.screen_cursor <= SCREEN_END:
-                self.memory[self.screen_cursor] = char_code
-                self.screen_cursor += 1
-                
-                # Wrap to next line if needed
-                if self.screen_cursor > SCREEN_END:
+        # Write each character
+        for char in text:
+            if char == '\n':
+                # Move to start of next line
+                current_pos = self.screen_cursor - SCREEN_START
+                current_row = current_pos // 40
+                next_row = current_row + 1
+                if next_row >= 25:
+                    # Scroll screen up
                     self.scroll_screen()
                     self.screen_cursor = SCREEN_START + (24 * 40)
+                else:
+                    self.screen_cursor = SCREEN_START + (next_row * 40)
+            else:
+                # Write character at cursor
+                if self.screen_cursor <= SCREEN_END:
+                    self.memory[self.screen_cursor] = ord(char)
+                    self.screen_cursor += 1
+                    
+                    # Wrap to next line if needed
+                    if self.screen_cursor > SCREEN_END:
+                        self.scroll_screen()
+                        self.screen_cursor = SCREEN_START + (24 * 40)
     
     def scroll_screen(self) -> None:
         """Scroll screen memory up one line."""
