@@ -12,7 +12,7 @@ from core.token_executor import TokenExecutor
 from ncdos.disk import NCDOSDisk
 
 class ZenBasicRepl:
-    def __init__(self):
+    def __init__(self, standalone=True):
         self.running = True
         self.parser = BasicParser()
         self.turbo = False  # RIP turbo mode, we have a co-processor now!
@@ -24,7 +24,10 @@ class ZenBasicRepl:
         # Initialize NCDOS disk system
         disk_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ncdos", "ncdos.dsk")
         self.disk = NCDOSDisk(disk_path)
-        print(f"NCDOS disk {'loaded' if os.path.exists(disk_path) else 'formatted'}")
+        
+        # Only show disk message if running standalone (not from DOS)
+        if standalone:
+            print(f"NCDOS disk {'loaded' if os.path.exists(disk_path) else 'formatted'}")
 
     def print_banner(self):
         """Print startup banner like original BBC BASIC"""

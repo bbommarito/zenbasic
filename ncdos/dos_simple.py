@@ -43,6 +43,9 @@ class NCDOSSimple:
     
     def boot(self):
         """Boot NCDOS and start command prompt."""
+        # Clear screen on boot for clean start
+        os.system('cls' if os.name == 'nt' else 'clear')
+        
         print("NCDOS 1.0 - NinthCircle DOS")
         print("64K RAM System, 160KB Disk")
         print()
@@ -188,17 +191,23 @@ class NCDOSSimple:
     def cmd_basic(self, args: List[str]):
         """BASIC - Load BASIC ROM."""
         print("Loading BASIC ROM...")
-        print()
         
-        # Launch BASIC interpreter
-        from core.repl import ZenBasicRepl
-        basic = ZenBasicRepl()
+        # Small delay to show loading message
+        import time
+        time.sleep(0.5)
         
-        # Clear screen and run
+        # Clear screen for BASIC
         os.system('cls' if os.name == 'nt' else 'clear')
+        
+        # Launch BASIC interpreter (not standalone since launched from DOS)
+        from core.repl import ZenBasicRepl
+        basic = ZenBasicRepl(standalone=False)
         basic.repl()
         
-        print("\nReturned to NCDOS")
+        # Clear screen when returning to DOS
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("Returned to NCDOS")
+        print()
     
     def cmd_edit(self, args: List[str]):
         """EDIT - Load editor ROM."""
