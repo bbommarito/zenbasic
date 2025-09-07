@@ -7,7 +7,7 @@ just like real 8-bit interpreters did. No parsing, no AST,
 just raw token interpretation.
 """
 from typing import Optional, Tuple, Any
-from tokens import TOKENS
+from core.tokens import TOKENS
 
 
 class TokenExecutor:

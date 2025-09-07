@@ -5,7 +5,8 @@ Test the NCDOS disk SAVE/LOAD functionality
 
 import os
 import sys
-from repl import ZenBasicRepl
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from core.repl import ZenBasicRepl
 
 def test_save_load():
     """Test saving and loading BASIC programs to NCDOS disk"""

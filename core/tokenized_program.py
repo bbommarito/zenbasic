@@ -4,8 +4,8 @@ Stores BASIC programs as tokenized bytes in actual memory
 Just like 1983!
 """
 from typing import Optional, List, Tuple
-from tokens import tokenize_line, detokenize
-
+from core.tokens import tokenize_line, detokenize
+from core.memory import MemoryManager
 
 class TokenizedProgramStore:
     """

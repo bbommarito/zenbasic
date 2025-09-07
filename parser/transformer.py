@@ -2,10 +2,10 @@ from __future__ import annotations
 from lark import Transformer, Token
 from typing import Dict, Any, List, Tuple, Union, TYPE_CHECKING
 
-from arithmetic import AuthenticArithmetic
+from parser.arithmetic import AuthenticArithmetic
 
 if TYPE_CHECKING:
-    from repl import ZenBasicRepl
+    from core.repl import ZenBasicRepl
 
 class BasicTransformer(Transformer[Any, Any]):
     def __init__(self, repl_instance=None, turbo: bool = False):

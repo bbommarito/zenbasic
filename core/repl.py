@@ -3,13 +3,13 @@ import subprocess
 import os
 from typing import Optional, Any, Tuple
 
-from transformer import BasicTransformer
-from parser import BasicParser, exceptions
-from memory import MemoryManager
-from tokenized_program import TokenizedProgramStore
-from commands import CommandRegistry
-from token_executor import TokenExecutor
-from disk import NCDOSDisk
+from parser.transformer import BasicTransformer
+from parser.parser import BasicParser, exceptions
+from core.memory import MemoryManager
+from core.tokenized_program import TokenizedProgramStore
+from core.commands import CommandRegistry
+from core.token_executor import TokenExecutor
+from ncdos.disk import NCDOSDisk
 
 class ZenBasicRepl:
     def __init__(self):
@@ -22,8 +22,9 @@ class ZenBasicRepl:
         self.token_executor = TokenExecutor(self)  # Direct token execution!
         
         # Initialize NCDOS disk system
-        self.disk = NCDOSDisk("ncdos.dsk")
-        print(f"NCDOS disk {'loaded' if os.path.exists('ncdos.dsk') else 'formatted'}")
+        disk_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ncdos", "ncdos.dsk")
+        self.disk = NCDOSDisk(disk_path)
+        print(f"NCDOS disk {'loaded' if os.path.exists(disk_path) else 'formatted'}")
 
     def print_banner(self):
         """Print startup banner like original BBC BASIC"""
@@ -141,7 +142,7 @@ class ZenBasicRepl:
             except NotImplementedError:
                 # Token executor doesn't handle this yet, fall back to parser
                 # Detokenize and parse the old way
-                from tokens import detokenize
+                from core.tokens import detokenize
                 code = detokenize(tokens)
                 
                 try:
