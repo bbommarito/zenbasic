@@ -5,6 +5,7 @@ Because if/elif chains are where good code goes to die
 from typing import Dict, Callable, Optional, Protocol, Any
 import re
 import inspect
+import os
 
 
 class ReplProtocol(Protocol):
@@ -14,6 +15,7 @@ class ReplProtocol(Protocol):
     memory_manager: Any
     turbo: bool
     running: bool
+    disk: Optional[Any]  # NCDOS disk system
     
     def run_program(self) -> None: ...
     def new_program(self) -> None: ...
@@ -85,7 +87,11 @@ class CommandRegistry:
         self.register("MAP", cmd_memory, "Display memory map (alias for MEMORY)")
         self.register("DUMP", cmd_dump, "Dump memory contents (DUMP [address])")
         self.register("SYMBOLS", cmd_symbols, "Display symbol table")
-        self.register("SAVE", cmd_save, "Save program to file (SAVE filename)")
+        self.register("SAVE", cmd_save, "Save program to disk (SAVE filename)")
+        self.register("LOAD", cmd_load, "Load program from disk (LOAD filename)")
+        self.register("CATALOG", cmd_catalog, "List files on disk")
+        self.register("CAT", cmd_catalog, "List files on disk (alias for CATALOG)")
+        self.register("DELETE", cmd_delete, "Delete file from disk (DELETE filename)")
         self.register("QUIT", cmd_quit, "Exit the interpreter")
         self.register("EXIT", cmd_quit, "Exit the interpreter (alias for QUIT)")
         self.register("HELP", cmd_help, "Show available commands")
@@ -172,19 +178,142 @@ def cmd_dump(repl: ReplProtocol, command_line: str) -> None:
 
 
 def cmd_save(repl: ReplProtocol, command_line: str) -> None:
-    """Save program to file"""
+    """Save program to disk using NCDOS"""
     parts = command_line.split(maxsplit=1)
     if len(parts) < 2:
         print("Error: SAVE requires a filename")
+        return
+    
+    filename = parts[1].strip().upper()
+    
+    # Add .BAS extension if not present
+    if '.' not in filename:
+        filename += '.BAS'
+    
+    # Check if we have disk system
+    if not hasattr(repl, 'disk') or repl.disk is None:
+        # Fall back to regular file save
+        print("No disk system - saving to regular file")
+        repl.program_store.save_to_file(filename.lower())
+        return
+    
+    # Get program as tokenized bytes or text
+    lines = repl.program_store.get_all_lines()
+    if not lines:
+        print("No program in memory")
+        return
+    
+    # Create program text
+    program_text = ""
+    for line_num, code in lines:
+        program_text += f"{line_num} {code}\n"
+    
+    # Save to NCDOS disk
+    if repl.disk.save_file(filename, program_text.encode('ascii')):
+        print(f"Saved {len(program_text)} bytes to {filename}")
     else:
-        filename = parts[1].strip()
-        repl.program_store.save_to_file(filename)
+        print(f"Error saving {filename} - disk may be full")
 
 
 def cmd_quit(repl: ReplProtocol) -> None:
     """Exit the interpreter"""
     repl.running = False
     print("Goodbye!")
+
+
+def cmd_load(repl: ReplProtocol, command_line: str) -> None:
+    """Load program from disk using NCDOS"""
+    parts = command_line.split(maxsplit=1)
+    if len(parts) < 2:
+        print("Error: LOAD requires a filename")
+        return
+    
+    filename = parts[1].strip().upper()
+    
+    # Add .BAS extension if not present
+    if '.' not in filename:
+        filename += '.BAS'
+    
+    # Check if we have disk system
+    if not hasattr(repl, 'disk') or repl.disk is None:
+        # Fall back to regular file load
+        print("No disk system - loading from regular file")
+        # Would implement regular file load here
+        return
+    
+    # Load from NCDOS disk
+    data = repl.disk.load_file(filename)
+    if data is None:
+        print(f"File not found: {filename}")
+        return
+    
+    # Clear current program
+    repl.new_program()
+    
+    # Parse and store lines
+    try:
+        text = data.decode('ascii')
+        line_count = 0
+        for line in text.split('\n'):
+            line = line.strip()
+            if line:
+                # Process the line through the REPL
+                # This will handle line numbering and tokenization
+                if hasattr(repl, 'process_line'):
+                    repl.process_line(line)
+                    line_count += 1
+        print(f"Loaded {line_count} lines from {filename}")
+    except Exception as e:
+        print(f"Error loading program: {e}")
+
+
+def cmd_catalog(repl: ReplProtocol) -> None:
+    """List files on disk"""
+    if not hasattr(repl, 'disk') or repl.disk is None:
+        print("No disk system available")
+        return
+    
+    files = repl.disk.list_files()
+    if not files:
+        print("No files on disk")
+        return
+    
+    print("Files on disk:")
+    total_size = 0
+    for filename, size in sorted(files):
+        print(f"  {filename:<12} {size:>6} bytes")
+        total_size += size
+    
+    # Calculate free space
+    used_sectors = total_size // 256 + (1 if total_size % 256 else 0)
+    total_sectors = 40 * 16  # 40 tracks, 16 sectors per track
+    free_sectors = total_sectors - used_sectors - 16  # Minus system tracks
+    
+    print(f"\nTotal: {len(files)} files, {total_size} bytes")
+    print(f"Free: {free_sectors * 256} bytes")
+
+
+def cmd_delete(repl: ReplProtocol, command_line: str) -> None:
+    """Delete file from disk"""
+    parts = command_line.split(maxsplit=1)
+    if len(parts) < 2:
+        print("Error: DELETE requires a filename")
+        return
+    
+    filename = parts[1].strip().upper()
+    
+    # Add .BAS extension if not present and no extension given
+    if '.' not in filename:
+        filename += '.BAS'
+    
+    if not hasattr(repl, 'disk') or repl.disk is None:
+        print("No disk system available")
+        return
+    
+    if repl.disk.delete_file(filename):
+        print(f"Deleted {filename}")
+    else:
+        print(f"File not found: {filename}")
 
 
 def cmd_help(repl: ReplProtocol) -> None:

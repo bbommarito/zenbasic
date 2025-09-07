@@ -9,6 +9,7 @@ from memory import MemoryManager
 from tokenized_program import TokenizedProgramStore
 from commands import CommandRegistry
 from token_executor import TokenExecutor
+from disk import NCDOSDisk
 
 class ZenBasicRepl:
     def __init__(self):
@@ -19,6 +20,10 @@ class ZenBasicRepl:
         self.program_store = TokenizedProgramStore(self.memory_manager)  # Now uses actual memory!
         self.command_registry = CommandRegistry()
         self.token_executor = TokenExecutor(self)  # Direct token execution!
+        
+        # Initialize NCDOS disk system
+        self.disk = NCDOSDisk("ncdos.dsk")
+        print(f"NCDOS disk {'loaded' if os.path.exists('ncdos.dsk') else 'formatted'}")
 
     def print_banner(self):
         """Print startup banner like original BBC BASIC"""
@@ -161,6 +166,18 @@ class ZenBasicRepl:
 
     def clear_screen(self):
         subprocess.run(['clear'] if os.name == 'posix' else ['cmd', '/c', 'cls'])
+    
+    def process_line(self, line: str):
+        """Process a single line of BASIC code (used by LOAD command)"""
+        # Parse for line number
+        line_num, code = self.parse_line_number(line)
+        
+        if line_num is not None:
+            # Store numbered line
+            self.store_program_line(line_num, code)
+        else:
+            # Execute immediate command
+            self.execute_immediate_command(code)
 
 
     def repl(self):
