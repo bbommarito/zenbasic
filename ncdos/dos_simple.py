@@ -199,9 +199,9 @@ class NCDOSSimple:
         # Clear screen for BASIC
         os.system('cls' if os.name == 'nt' else 'clear')
         
-        # Launch BASIC interpreter (not standalone since launched from DOS)
+        # Launch BASIC interpreter with shared disk
         from core.repl import ZenBasicRepl
-        basic = ZenBasicRepl(standalone=False)
+        basic = ZenBasicRepl(standalone=False, disk=self.disk)
         basic.repl()
         
         # Clear screen when returning to DOS
