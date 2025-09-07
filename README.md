@@ -1,32 +1,50 @@
-# ZenBasic
+# ZenBasic / NCDOS
 
-A Python-based interpreter for BBC BASIC, born from nostalgia and a love for the simplicity of early computing.
+A Python-based 8-bit computer system featuring BBC BASIC and NinthCircle DOS - a complete disk operating system with FAT filesystem. Born from nostalgia and the beautiful madness of recreating history.
 
 ## About
 
-ZenBasic is a learning project that recreates the experience of programming in BASIC on early home computers. It's inspired by memories of sitting in front of a tiny 13" TV with a TI-99/4A, typing out BASIC code and watching programs come to life one line at a time.
+ZenBasic started as a learning project to recreate BASIC programming on early home computers. It has evolved into something beautifully absurd: a complete 8-bit computer system trapped in Python, featuring:
 
-This project aims to capture that same sense of immediacy and simplicity that made early computers so engaging - where you could type a line number, enter some code, and build your program interactively.
+- **ZenBasic**: An authentic BBC BASIC interpreter with tokenized programs and memory-mapped variables
+- **NCDOS (NinthCircle DOS)**: A working disk operating system with virtual floppy disks and FAT filesystem
+- **Authentic Hardware Emulation**: 64K memory space, ROM banking, and disk I/O just like the 1980s
+
+This is no longer just an interpreter - it's an entire retrocomputing ecosystem where you can write programs, save them to virtual floppies, and experience computing the way it was meant to be: one sector at a time.
 
 ## Features
 
 ### Currently Implemented
-- **Interactive REPL** (Read-Eval-Print Loop)
-- **Line-numbered program storage** - Just like classic BASIC!
-- **LET statements** - Assign values to variables (uppercase names only, like a proper BASIC)
-- **Variables** - Integer (%), floating point, and strings ($) in classic BASIC style
-- **Real Memory System** - Variables stored at actual memory addresses!
-- **Arithmetic** - All four operations implemented the *authentic* way (see below)
-- **Immediate mode commands**:
-  - `LIST` - Display the current program
-  - `RUN` - Execute the stored program
-  - `NEW` - Clear the current program  
-  - `VARS` - List all variables and their values
-  - `CLS`/`CLEAR` - Clear the screen
-  - `SAVE filename` - Save your program (with whitespace preserved!)
-  - `DUMP [address]` - Examine memory contents
-  - `TURBO`/`SLOW` - Toggle fast arithmetic mode
-  - `QUIT`/`EXIT` - Exit the interpreter
+
+#### BASIC System
+- **Interactive REPL** with tokenized program storage
+- **Line-numbered programs** - Stored as tokens in memory
+- **LET statements** - Variables stored at real memory addresses
+- **Variables** - Integer (%), floating point, and strings ($)
+- **Arithmetic** - Implemented with loops for authenticity
+- **Memory System** - Full 64K address space
+
+#### NCDOS Disk System 💾
+- **Virtual Floppy Disks** - 160KB capacity (40 tracks × 16 sectors × 256 bytes)
+- **FAT Filesystem** - Directory with 64 file entries
+- **8.3 Filenames** - FILENAME.EXT format
+- **Persistent Storage** - .dsk disk image files
+- **Disk Commands**:
+  - `SAVE filename` - Save program to disk
+  - `LOAD filename` - Load program from disk
+  - `CATALOG`/`CAT` - List files on disk
+  - `DELETE filename` - Delete file from disk
+
+#### System Commands
+- `LIST` - Display current program
+- `RUN` - Execute stored program
+- `NEW` - Clear program and variables
+- `VARS` - List all variables
+- `MEMORY`/`MAP` - Display memory map
+- `DUMP [address]` - Examine memory contents
+- `TURBO`/`SLOW` - Toggle arithmetic mode
+- `CLS`/`CLEAR` - Clear screen/variables
+- `QUIT`/`EXIT` - Exit interpreter
 
 ### Mathematical "Features" (Working As Intended)
 - **Addition by counting** - Why use the ALU when you have loops? Addition is performed by incrementing one-by-one
@@ -36,7 +54,7 @@ This project aims to capture that same sense of immediacy and simplicity that ma
 - **Integer overflow** - Store 100,000 in a 16-bit integer? You get 34,464 and you'll like it!
 - **Turbo mode** - For when you need 1000 + 1000 to finish before lunch
 
-### Example Session
+### Example Session - Now with Disk Support!
 
 ```
 $ python main.py
@@ -69,6 +87,30 @@ Program saved to myprogram.bas
 Program cleared
 > LIST
 No program in memory
+
+> 10 PRINT "HELLO FROM NCDOS"
+> 20 PRINT "THE NINTH CIRCLE OF DOS"
+> SAVE HELLO
+Saved 52 bytes to HELLO.BAS
+
+> CATALOG
+Files on disk:
+  HELLO.BAS        52 bytes
+  MYPROGRAM.BAS    67 bytes
+
+Total: 2 files, 119 bytes
+Free: 159232 bytes
+
+> NEW
+Program cleared
+
+> LOAD HELLO
+Loaded 2 lines from HELLO.BAS
+
+> RUN
+HELLO FROM NCDOS
+THE NINTH CIRCLE OF DOS
+
 > QUIT
 Goodbye!
 ```
@@ -88,13 +130,25 @@ python main.py
 ```
 
 ## Project Structure
-- `main.py` - Entry point for the application
-- `repl.py` - Core REPL implementation
-- `transformer.py` - Lark-based parser and transformer (where the mathematical magic happens)
-- `memory.py` - Memory management with authentic 64K address space
-- `arithmetic.py` - Loop-based arithmetic operations
-- `program.py` - Program line storage and management
-- `.gitignore` - Git ignore file for Python projects
+
+### Core System
+- `main.py` - Entry point
+- `repl.py` - REPL with disk integration
+- `memory.py` - 64K memory management
+- `tokenized_program.py` - Tokenized program storage
+- `token_executor.py` - Direct token execution
+- `commands.py` - Command registry (including disk ops)
+
+### Parser/Transformer
+- `transformer.py` - Lark-based parser/transformer
+- `parser.py` - BASIC grammar definition
+- `arithmetic.py` - Loop-based arithmetic
+- `tokens.py` - Token definitions
+
+### NCDOS Components
+- `disk.py` - Virtual disk with FAT filesystem
+- `rom.py` - ROM system with I/O vectors
+- `ncdos.dsk` - Default disk image file
 
 ## Memory Map
 
