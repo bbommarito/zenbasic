@@ -1,16 +1,18 @@
-# ZenBasic / NCDOS
+# NCDOS / ZenBasic
 
-A complete 8-bit computer system implemented in Python, featuring BBC BASIC and NinthCircle DOS - a working disk operating system with FAT filesystem. Born from nostalgia and the beautiful madness of recreating history.
+A complete DOS-based 8-bit computer system implemented in Python. Boot directly to the NCDOS command prompt, just like MS-DOS or CP/M in 1983. Features a working FAT filesystem, virtual floppy disks, and a BBC BASIC interpreter you can launch from DOS.
 
 ## About
 
-ZenBasic started as a learning project to recreate BASIC programming on early home computers. It has evolved into something beautifully absurd: a complete 8-bit computer system trapped in Python, featuring:
+What started as a BASIC interpreter has evolved into a complete DOS-based computer system, authentically recreating the 1983 computing experience:
 
-- **ZenBasic**: An authentic BBC BASIC interpreter with tokenized programs and memory-mapped variables
-- **NCDOS (NinthCircle DOS)**: A working disk operating system with virtual floppy disks and FAT filesystem
-- **Authentic Hardware Emulation**: 64K memory space, ROM banking, and disk I/O just like the 1980s
+- **NCDOS (NinthCircle DOS)**: Boot directly to `A>` prompt, just like MS-DOS or CP/M
+- **DOS Commands**: DIR, TYPE, COPY, DEL, REN - manage files from the command line
+- **ZenBasic**: Type `BASIC` at the DOS prompt to launch the BBC BASIC interpreter
+- **Virtual Floppy Disk**: 160KB disk with FAT filesystem, persistent .dsk files
+- **Authentic Architecture**: 64K memory, ROM banking, proper DOS/program separation
 
-This is no longer just an interpreter - it's an entire retrocomputing ecosystem where you can write programs, save them to virtual floppies, and experience computing the way it was meant to be: one sector at a time.
+This is computing as it was in 1983: boot to DOS, launch programs, return to DOS. No GUI, no mouse, just you and the command prompt.
 
 ## Key Features
 
@@ -38,22 +40,44 @@ git clone https://github.com/bbommarito/zenbasic.git
 cd zenbasic
 pip install lark
 python main.py
+
+# You'll boot directly to NCDOS:
+NCDOS 1.0 - NinthCircle DOS
+64K RAM System, 160KB Disk
+
+A>_
 ```
 
 ## Example Session
 
 ```
+NCDOS 1.0 - NinthCircle DOS
+64K RAM System, 160KB Disk
+
+A>DIR
+
+Directory of A:
+
+HELLO    BAS      43
+LETTER   TXT     256
+
+2 file(s), 299 bytes
+159445 bytes free
+
+A>TYPE LETTER.TXT
+Dear User,
+Welcome to the Ninth Circle of DOS!
+Enjoy your stay.
+
+A>BASIC
+Loading BASIC ROM...
+
 ZenBasic
-NCDOS disk formatted
 Ready
 
 > 10 LET A% = 100
 > 20 LET B% = 200  
 > 30 LET C% = A% + B%
-> LIST
-   10 LET A% = 100
-   20 LET B% = 200
-   30 LET C% = A% + B%
 > RUN
 Running program...
 > VARS
@@ -61,67 +85,60 @@ Variables:
 A% = 100
 B% = 200
 C% = 300
-
 > SAVE MYPROG
 Saved 45 bytes to MYPROG.BAS
-
-> NEW
-Program cleared
-
-> 10 PRINT "HELLO FROM NCDOS"
-> 20 PRINT "THE NINTH CIRCLE OF DOS"
-> SAVE HELLO
-Saved 52 bytes to HELLO.BAS
-
-> CATALOG
-Files on disk:
-  HELLO.BAS        52 bytes
-  MYPROG.BAS       45 bytes
-
-Total: 2 files, 97 bytes
-Free: 159456 bytes
-
-> NEW
-Program cleared
-
-> LOAD HELLO
-Loaded 2 lines from HELLO.BAS
-
-> RUN
-HELLO FROM NCDOS
-THE NINTH CIRCLE OF DOS
-
 > QUIT
 Goodbye!
+
+Returned to NCDOS
+A>DIR
+
+Directory of A:
+
+HELLO    BAS      43
+LETTER   TXT     256
+MYPROG   BAS      45
+
+3 file(s), 344 bytes
+159400 bytes free
+
+A>EXIT
+Goodbye from the Ninth Circle!
 ```
 
 ## Commands
 
-### Program Commands
+### NCDOS Commands (at A> prompt)
+- `DIR` or `CAT` - List files on disk
+- `TYPE filename` - Display text file contents
+- `COPY source dest` - Copy a file
+- `DEL filename` - Delete a file
+- `REN old new` - Rename a file
+- `CLS` - Clear screen
+- `BASIC` - Launch ZenBasic interpreter
+- `EDIT filename` - Launch text editor (coming soon)
+- `HELP` - Show available commands
+- `EXIT` - Exit NCDOS
+
+### BASIC Commands (after typing BASIC)
 - `LIST` - Display current program
 - `RUN` - Execute stored program
 - `NEW` - Clear program and variables
 - `VARS` - List all variables
-
-### Disk Commands
 - `SAVE filename` - Save program to disk
 - `LOAD filename` - Load program from disk
-- `CATALOG`/`CAT` - List files on disk
-- `DELETE filename` - Delete file from disk
-
-### System Commands
-- `MEMORY`/`MAP` - Display memory map
+- `CATALOG` - List files on disk
+- `MEMORY` - Display memory map
 - `DUMP [address]` - Examine memory contents
-- `SYMBOLS` - Display symbol table
 - `TURBO`/`SLOW` - Toggle arithmetic mode
-- `CLS`/`CLEAR` - Clear screen/variables
-- `QUIT`/`EXIT` - Exit interpreter
+- `QUIT` - Return to NCDOS
 
 ## Documentation
 
-- **[Architecture Overview](docs/ARCHITECTURE.md)** - Technical details and design decisions
-- **[Commands Reference](docs/COMMANDS.md)** - Complete list of commands and examples
-- **[NCDOS Modes](docs/NCDOS_MODES.md)** - Future multi-mode DOS plans
+- **[NCDOS Commands](docs/NCDOS_COMMANDS.md)** - Complete DOS command reference
+- **[BASIC Commands](docs/COMMANDS.md)** - ZenBasic interpreter commands
+- **[Architecture Overview](docs/ARCHITECTURE.md)** - Technical details and design
+- **[NCDOS Modes](docs/NCDOS_MODES.md)** - Future expansion plans
 - **[Development Guide](WARP.md)** - For contributors and developers
 
 ## Project Structure

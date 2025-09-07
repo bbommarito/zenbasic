@@ -4,10 +4,11 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 
 ## Project Overview
 
-ZenBasic/NCDOS is a complete 8-bit computer system implemented in Python:
-- **ZenBasic**: BBC BASIC interpreter with tokenized programs and memory-mapped variables
-- **NCDOS (NinthCircle DOS)**: Disk operating system with FAT filesystem and virtual floppy disks
-- **Authentic Implementation**: Arithmetic through loops, 64K memory space, disk sectors - all historically accurate
+NCDOS/ZenBasic is a complete DOS-based 8-bit computer system implemented in Python:
+- **NCDOS (NinthCircle DOS)**: Primary interface - boots to A> prompt like MS-DOS/CP/M
+- **ZenBasic**: BBC BASIC interpreter launched by typing `BASIC` at DOS prompt
+- **Authentic Architecture**: Proper DOS/program separation, ROM banking, FAT filesystem
+- **Historical Accuracy**: Boots to command line, launches programs, returns to DOS - exactly like 1983
 
 ## Key Architecture
 
@@ -34,17 +35,20 @@ The project uses a dual-path execution model with integrated disk system:
 - **arithmetic.py** - Authentic loop-based operations
 
 ### NCDOS Components
+- **dos_simple.py** - Main DOS command prompt (current implementation)
+- **dos.py** - Full ROM vector version (future)
 - **disk.py** - Virtual 160KB floppy with FAT filesystem
 - **rom.py** - ROM banking and I/O vectors
 - **ncdos.dsk** - Persistent disk image file
-- **commands.py** - Command registry including disk operations
 
 ## Development Commands
 
 ### Running the System
 ```bash
 python main.py
-# This will create/load ncdos.dsk automatically
+# Boots directly to NCDOS A> prompt
+# Type 'HELP' for commands
+# Type 'BASIC' to enter ZenBasic
 ```
 
 ### Testing Disk Operations
